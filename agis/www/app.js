@@ -28,7 +28,7 @@ async function openFiles(files){
     imported.forEach(item=>{
       const layer=addLayer(item.name,item.data,item.type);
       layer.metadata=item.metadata;
-      if(item.type==='raster') layer.sourceFiles=selected.filter(f=>/\\.(tif|tiff|geotiff)$/i.test(f.name));
+      if(item.type==='raster'){const source=item.metadata?.source||'';const matched=selected.find(f=>source.endsWith(f.name))||selected.find(f=>/\\.(tif|tiff|geotiff)$/i.test(f.name));layer.sourceFiles=matched?[matched]:[];}
     });
     const newest=state.layers.at(-1);
     if(newest?.leaflet){const bounds=newest.leaflet.getBounds();if(bounds.isValid())map.fitBounds(bounds,{padding:[20,20]});}
@@ -61,7 +61,8 @@ function rasterToolDialog(tool){
   if(tool==='clip') fields+='<label>Extent (xmin ymin xmax ymax)<input id="rasterExtent" placeholder="xmin ymin xmax ymax"></label><label>Extent CRS (optional)<input id="extentCrs" placeholder="EPSG:32646"></label>';
   if(tool==='mask') fields+='<label>Polygon mask layer<select id="maskLayer">'+vectors.filter(l=>l.data.features.some(f=>f.geometry?.type?.includes('Polygon'))).map(l=>'<option value="'+l.id+'">'+esc(l.name)+'</option>').join('')+'</select></label>';
   if(tool==='reproject') fields+='<label>Target CRS<input id="targetEpsg" value="EPSG:32646"></label>';
-  if(tool==='resample'||tool==='align') fields+='<label>Cell size X<input id="cellX" type="number" min="0.000001" step="any" value="30"></label><label>Cell size Y<input id="cellY" type="number" min="0.000001" step="any" value="30"></label><label>Resampling method<select id="resampleMethod"><option value="near">Nearest neighbour (categorical)</option><option value="bilinear">Bilinear (continuous)</option><option value="cubic">Cubic</option><option value="average">Average</option><option value="mode">Mode</option></select></label>'+(tool==='align'?'<label>Target CRS (optional)<input id="targetEpsg" placeholder="EPSG:32646"></label>':'');
+  if(tool==='resample') fields+='<label>Cell size X<input id="cellX" type="number" min="0.000001" step="any" value="30"></label><label>Cell size Y<input id="cellY" type="number" min="0.000001" step="any" value="30"></label><label>Resampling method<select id="resampleMethod"><option value="near">Nearest neighbour (categorical)</option><option value="bilinear">Bilinear (continuous)</option><option value="cubic">Cubic</option><option value="average">Average</option><option value="mode">Mode</option></select></label>'+(tool==='align'?'<label>Target CRS (optional)<input id="targetEpsg" placeholder="EPSG:32646"></label>':'');
+  if(tool==='align') fields+='<label>Reference grid<select id="referenceRaster">'+options+'</select></label><label>Resampling method<select id="resampleMethod"><option value="near">Nearest neighbour (categorical)</option><option value="bilinear">Bilinear (continuous)</option><option value="cubic">Cubic</option></select></label>';
   if(tool==='reclass') fields+='<label>Reclassification rules (minimum maximum new_value; one rule per line)<textarea id="reclassRules" rows="5" placeholder="0 10 1&#10;10 20 2&#10;20 30 3"></textarea></label>';
   fields+='<label>Output name<input id="rasterOutputName" value="'+def.id+'_output"></label><label><input type="checkbox" id="alsoFileGdb" checked> Also export to FileGDB (if writable)</label><div class="actions"><button class="primary" id="runRaster">Run tool</button></div><p class="hint" id="rasterProgress"></p>';
   dialog(def.name,fields);
@@ -75,7 +76,7 @@ function rasterToolDialog(tool){
     if(tool==='clip'){params.extent=$('#rasterExtent').value;params.extentCrs=$('#extentCrs').value}
     if(tool==='mask'){const m=state.layers.find(l=>l.id===$('#maskLayer').value);params.maskGeoJSON=m?.data}
     if(tool==='reproject')params.epsg=$('#targetEpsg').value;
-    if(tool==='resample'||tool==='align'){params.cellX=$('#cellX').value;params.cellY=$('#cellY').value;params.method=$('#resampleMethod').value;params.epsg=$('#targetEpsg')?.value}
+    if(tool==='resample'){params.cellX=$('#cellX').value;params.cellY=$('#cellY').value;params.method=$('#resampleMethod').value}if(tool==='align'){const ref=state.layers.find(l=>l.id===$('#referenceRaster').value);params.referenceFile=ref?.sourceFiles?.[0];params.method=$('#resampleMethod').value}
     if(tool==='reclass')params.rules=$('#reclassRules').value;
     $('#runRaster').disabled=true;
     try{
