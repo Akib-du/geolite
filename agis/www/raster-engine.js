@@ -213,14 +213,22 @@ export async function runRasterTool({tool,files,params={},onProgress=()=>{}}) {
   } else if (tool==='reproject') {
     if(!/^EPSG:\d+$/i.test(params.epsg||'')) throw new Error('Enter a valid EPSG code, for example EPSG:32646.');
     opts.push('-t_srs',params.epsg.toUpperCase());
-  } else if (tool==='resample'||tool==='align') {
+  } else if (tool==='resample') {
     const x=Number(params.cellX),y=Number(params.cellY);
     if(!(x>0&&y>0)) throw new Error('Enter positive X and Y cell sizes.');
     opts.push('-tr',String(x),String(y),'-r',params.method||'near');
-    if(tool==='align') {
-      if(params.epsg) opts.push('-t_srs',params.epsg);
-      opts.push('-tap');
-    }
+  } else if (tool==='align') {
+    if(!params.referenceFile) throw new Error('Choose a reference raster to define the target grid.');
+    const Gdal=await getGdalRuntime();
+    const refOpen=await Gdal.open(params.referenceFile);
+    const ref=refOpen.datasets?.[0];
+    if(!ref) throw new Error('Could not open the reference raster.');
+    try {
+      const info=await Gdal.getInfo(ref),gt=info.coordinateTransform;
+      if(!gt||Math.abs(gt[2])>1e-9||Math.abs(gt[4])>1e-9) throw new Error('Rotated reference grids are not supported by this alignment tool yet.');
+      const xmin=gt[0],xmax=gt[0]+gt[1]*info.width,ymax=gt[3],ymin=gt[3]+gt[5]*info.height;
+      opts.push('-t_srs',info.projectionWkt,'-te',String(Math.min(xmin,xmax)),String(Math.min(ymin,ymax)),String(Math.max(xmin,xmax)),String(Math.max(ymin,ymax)),'-tr',String(Math.abs(gt[1])),String(Math.abs(gt[5])),'-r',params.method||'near');
+    } finally { try { await Gdal.close(ref); } catch {} }
   } else throw new Error('This raster tool is not yet connected to the processing engine.');
   const output=await gdalWarp(file,opts,name);
   return output;
