@@ -63,6 +63,7 @@ function rasterToolDialog(tool){
   if(tool==='reproject') fields+='<label>Target CRS<input id="targetEpsg" value="EPSG:32646"></label>';
   if(tool==='resample') fields+='<label>Cell size X<input id="cellX" type="number" min="0.000001" step="any" value="30"></label><label>Cell size Y<input id="cellY" type="number" min="0.000001" step="any" value="30"></label><label>Resampling method<select id="resampleMethod"><option value="near">Nearest neighbour (categorical)</option><option value="bilinear">Bilinear (continuous)</option><option value="cubic">Cubic</option><option value="average">Average</option><option value="mode">Mode</option></select></label>'+(tool==='align'?'<label>Target CRS (optional)<input id="targetEpsg" placeholder="EPSG:32646"></label>':'');
   if(tool==='align') fields+='<label>Reference grid<select id="referenceRaster">'+options+'</select></label><label>Resampling method<select id="resampleMethod"><option value="near">Nearest neighbour (categorical)</option><option value="bilinear">Bilinear (continuous)</option><option value="cubic">Cubic</option></select></label>';
+  if(tool==='stream') fields+='<label>Flow accumulation threshold (cells)<input id="streamThreshold" type="number" min="1" value="100"></label>';
   if(tool==='reclass') fields+='<label>Reclassification rules (minimum maximum new_value; one rule per line)<textarea id="reclassRules" rows="5" placeholder="0 10 1&#10;10 20 2&#10;20 30 3"></textarea></label>';
   fields+='<label>Output name<input id="rasterOutputName" value="'+def.id+'_output"></label><label><input type="checkbox" id="alsoFileGdb" checked> Also export to FileGDB (if writable)</label><div class="actions"><button class="primary" id="runRaster">Run tool</button></div><p class="hint" id="rasterProgress"></p>';
   dialog(def.name,fields);
@@ -77,7 +78,7 @@ function rasterToolDialog(tool){
     if(tool==='mask'){const m=state.layers.find(l=>l.id===$('#maskLayer').value);params.maskGeoJSON=m?.data}
     if(tool==='reproject')params.epsg=$('#targetEpsg').value;
     if(tool==='resample'){params.cellX=$('#cellX').value;params.cellY=$('#cellY').value;params.method=$('#resampleMethod').value}if(tool==='align'){const ref=state.layers.find(l=>l.id===$('#referenceRaster').value);params.referenceFile=ref?.sourceFiles?.[0];params.method=$('#resampleMethod').value}
-    if(tool==='reclass')params.rules=$('#reclassRules').value;
+    if(tool==='reclass')params.rules=$('#reclassRules').value;if(tool==='stream')params.threshold=$('#streamThreshold').value;
     $('#runRaster').disabled=true;
     try{
       const result=await runRasterTool({tool,files,params,onProgress:m=>$('#rasterProgress').textContent=m});
