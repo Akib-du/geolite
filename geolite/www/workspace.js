@@ -51,7 +51,7 @@
    $('#gp-table-bottom').onclick=openTable;
    $('#gp-remove-layer').onclick=()=>{const l=active();if(l&&confirm('Remove layer '+l.name+'?')){removeLayer(l.id);activeId=null;refresh()}};
   }
-  function refresh(){renderCatalog();renderContents();$('#gp-status-layers').textContent=S.layers.length+' layers';const l=active();if(l)activeId=l.id}
+  function refresh(){const l=active();if(l)activeId=l.id;renderCatalog();renderContents();$('#gp-status-layers').textContent=S.layers.length+' layers'}
   function layerMenu(){const l=active();if(!l)return;const a=prompt('Layer options: type 1 rename, 2 zoom, 3 attribute table, 4 remove','1');if(a==='1'){const n=prompt('New layer name',l.name);if(n){l.name=n;refresh()}}else if(a==='2')zoomTo(l);else if(a==='3')openTable();else if(a==='4'&&confirm('Remove '+l.name+'?')){removeLayer(l.id);activeId=null;refresh()}}
   function selectFeature(layer,feature){selected={layerId:layer.id,feature};activeId=layer.id;$('#gp-status-selection').textContent='Selected: '+(feature.properties?.name||feature.id||'Feature');renderEditbar();if($('#gp-attr-dock').classList.contains('open'))renderTable()}
   function wireSelection(){
@@ -83,8 +83,8 @@
    else if(a==='table')openTable();else if(a==='addfield'){openTable();addField()}
    else if(a==='extent'){const bounds=[];S.layers.filter(l=>l.visible).forEach(l=>{try{const b=l.type==='raster'?L.latLngBounds(l.raster.bounds):L.geoJSON(l.data).getBounds();if(b.isValid())bounds.push(b)}catch(e){}});if(bounds.length){const b=bounds.reduce((a,x)=>a.extend(x),bounds[0]);map.fitBounds(b.pad(.05))}}
    else if(a==='basemap'){$('#basemap-select').focus()}
-   else if(a==='catalog'){$('#gp-catalog').style.display='block'}
-   else if(a==='contents'){$('#gp-contents').style.display='block'}
+   else if(a==='catalog'){if(innerWidth<=650)view.classList.toggle('gp-catalog-open');else $('#gp-catalog').style.display='block'}
+   else if(a==='contents'){if(innerWidth<=650)view.classList.toggle('gp-contents-open');else $('#gp-contents').style.display='block'}
    else if(a==='tools')showTab('tools');else if(a==='python')showTab('python');else if(a==='layout'){showTab('layout');setRibbon('insert')}
    else if(a==='street'){$('#basemap-select').value='osm';$('#basemap-select').dispatchEvent(new Event('change'))}
    else if(a==='satellite'){$('#basemap-select').value='imagery';$('#basemap-select').dispatchEvent(new Event('change'))}
