@@ -25,7 +25,8 @@ function geoMetadata(image) {
     SampleFormat: 3,
     SamplesPerPixel: 1,
     Compression: 1,
-    PlanarConfiguration: 1
+    PlanarConfiguration: 1,
+    GDAL_NODATA: String(noDataValue)
   };
   for (const [key, value] of Object.entries(keys)) {
     if (typeof value === 'number' && Number.isFinite(value)) metadata[key] = value;
@@ -77,6 +78,7 @@ async function calculate(files, expression, name, onProgress) {
     const first = opened[0], width = first.getWidth(), height = first.getHeight();
     if (width * height > 16000000) throw new Error('This calculator currently limits a single operation to 16 million cells to protect Android memory. Clip or resample the inputs first.');
     const arrays = [];
+    const nodata = opened.map(im => Number(im.fileDirectory?.GDAL_NODATA));
     const variables = files.map((f, i) => String.fromCharCode(65 + i));
     for (let i = 0; i < opened.length; i++) {
       const im = opened[i];
@@ -91,6 +93,8 @@ async function calculate(files, expression, name, onProgress) {
     for (let y = 0; y < height; y++) {
       for (let x = 0; x < width; x++) {
         const idx = y * width + x;
+        const isNoData = arrays.some((a, i) => Number.isFinite(nodata[i]) && Number(a[idx]) === nodata[i]);
+        if (isNoData) { out[idx] = noDataValue; continue; }
         const pixel = Object.fromEntries(variables.map((v, i) => [v, arrays[i][idx]]));
         const value = fn(pixel);
         out[idx] = Number.isFinite(value) ? value : noDataValue;
@@ -106,6 +110,7 @@ async function reclassify(file, rules, name, onProgress) {
   const width = image.getWidth(), height = image.getHeight();
   if (width * height > 20000000) throw new Error('Reclassification is limited to 20 million cells per run on mobile. Resample or clip first.');
   const src = (await image.readRasters({ interleave: false }))[0];
+  const nodata=Number(image.fileDirectory?.GDAL_NODATA);
   const out = new Float32Array(src.length);
   const parsed = rules.split(/[\n;]+/).map(line => line.trim()).filter(Boolean).map(line => {
     const parts = line.split(/[,:\s]+/).map(Number);
@@ -116,6 +121,7 @@ async function reclassify(file, rules, name, onProgress) {
   if (!parsed.length) throw new Error('Enter at least one reclass rule.');
   for (let i = 0; i < src.length; i++) {
     const v = Number(src[i]);
+    if (Number.isFinite(nodata) && v===nodata) { out[i]=noDataValue; continue; }
     const rule = parsed.find(([min, max]) => v >= min && v <= max);
     out[i] = Number.isFinite(v) && rule ? rule[2] : noDataValue;
     if (i % Math.max(1, Math.floor(src.length / 50)) === 0) onProgress?.('Reclassifying: ' + Math.round(i / src.length * 100) + '%');
@@ -128,6 +134,8 @@ async function terrain(file, kind, name, onProgress) {
   const width = image.getWidth(), height = image.getHeight();
   if (width * height > 12000000) throw new Error('Terrain derivatives are limited to 12 million cells on this mobile build. Clip/resample your DEM first.');
   const src = (await image.readRasters({ interleave: false }))[0];
+  const nodata=Number(image.fileDirectory?.GDAL_NODATA);
+  const valid=v=>Number.isFinite(v)&&(!Number.isFinite(nodata)||v!==nodata);
   const res = image.getResolution();
   const px = Math.abs(res[0]), py = Math.abs(res[1]);
   const geoKeys = image.getGeoKeys?.() || {};
@@ -142,7 +150,7 @@ async function terrain(file, kind, name, onProgress) {
     for (let x = 1; x < width - 1; x++) {
       const i = y * width + x;
       const z1=src[i-width-1], z2=src[i-width], z3=src[i-width+1], z4=src[i-1], z6=src[i+1], z7=src[i+width-1], z8=src[i+width], z9=src[i+width+1];
-      if (![z1,z2,z3,z4,z6,z7,z8,z9].every(Number.isFinite)) continue;
+      if (![z1,z2,z3,z4,z6,z7,z8,z9].every(valid)) continue;
       const gx=((z3+2*z6+z9)-(z1+2*z4+z7))/(8*dx);
       const gy=((z7+2*z8+z9)-(z1+2*z2+z3))/(8*dy);
       const slope=Math.atan(Math.hypot(gx,gy));
