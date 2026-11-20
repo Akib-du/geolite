@@ -131,6 +131,9 @@ legend{font-size:12px;color:#55615b}
 <body>
 <div id="hdr"><h1>GeoLite Mobile</h1>
  <button id="btn-open">+ Open data</button>
+ <button id="btn-gps" title="Capture current GPS location">GPS</button>
+ <button id="btn-digitize" title="Create a GIS feature">+ Feature</button>
+ <select id="basemap-select" aria-label="Basemap" style="max-width:125px"><option value="osm">Street</option><option value="imagery">Satellite</option></select>
  <input type="file" id="file" multiple hidden>
 </div>
 <div id="main">
@@ -536,6 +539,71 @@ function loadSample(){let s=7;const rnd=()=>(s=(s*16807)%2147483647)/2147483647;
  for(let k=0;k<40;k++)pts.push({type:'Feature',properties:{name:'P'+(k+1),kind:['school','clinic','market'][k%3],score:Math.round(rnd()*100)},geometry:{type:'Point',coordinates:[90.30+rnd()*.2,23.70+rnd()*.2]}});
  addVector('sample_zones',fc(polys),null,true,false);addVector('sample_points',fc(pts));toast('Sample layers added')}
 
+
+/* ---------- Field tools: GPS, digitizing and imagery ---------- */
+let fieldDraw=null, fieldVertices=[], imageryLayer=null;
+function initFieldTools(){
+ const imagery=L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',{maxZoom:19,attribution:'Tiles © Esri'});
+ imageryLayer=imagery;
+ $('#basemap-select').onchange=e=>{
+   if(map.hasLayer(osm))map.removeLayer(osm);
+   if(map.hasLayer(imageryLayer))map.removeLayer(imageryLayer);
+   (e.target.value==='imagery'?imageryLayer:osm).addTo(map);
+ };
+ $('#btn-gps').onclick=()=>{
+   if(!navigator.geolocation){toast('GPS is not available on this device');return}
+   toast('Getting your location…',10000);
+   navigator.geolocation.getCurrentPosition(pos=>{
+     const lat=pos.coords.latitude,lon=pos.coords.longitude;
+     const name=prompt('Placemark name','My location');
+     if(name===null)return;
+     const desc=prompt('Description (optional)','')||'';
+     const feature={type:'Feature',properties:{name:name||'Placemark',description:desc,latitude:lat,longitude:lon,accuracy_m:Math.round(pos.coords.accuracy||0),captured_at:new Date().toISOString()},geometry:{type:'Point',coordinates:[lon,lat]}};
+     const l=addVector('Placemarks',fc([feature]),null,true,false);zoomTo(l);
+     toast('GPS placemark saved to layer');
+   },err=>toast('GPS error: '+err.message,6000),{enableHighAccuracy:true,timeout:15000,maximumAge:0});
+ };
+ $('#btn-digitize').onclick=()=>openDigitizeDialog();
+ map.on('click',e=>{
+   if(!fieldDraw)return;
+   const xy=[e.latlng.lng,e.latlng.lat];
+   if(fieldDraw.type==='Point'){finishDigitize([xy]);return}
+   fieldVertices.push(xy);
+   if(fieldDraw.preview){map.removeLayer(fieldDraw.preview);fieldDraw.preview=null}
+   fieldDraw.preview=L.polyline(fieldVertices,{color:'#e04b35',weight:3,dashArray:'5 5'}).addTo(map);
+   toast(fieldVertices.length+' vertices added. Tap Finish when ready.',1800);
+ });
+}
+function openDigitizeDialog(){
+ openModal('<h3>Create GIS feature</h3><p>Choose geometry, then tap the map to place vertices.</p><label>Feature type<select id="draw-type"><option value="Point">Point</option><option value="LineString">Line</option><option value="Polygon">Polygon</option></select></label><label>Layer name<input id="draw-layer" value="New features"></label><label>Feature name<input id="draw-name" value="New feature"></label><label>Description<input id="draw-desc" value=""></label><div class="row"><button class="pri" id="draw-start">Start drawing</button><button id="draw-cancel">Cancel</button></div><p id="draw-help"><small>Point: tap once. Line/Polygon: tap each vertex, then finish.</small></p>');
+ $('#draw-cancel').onclick=()=>closeModal();
+ $('#draw-start').onclick=()=>{
+   const type=$('#draw-type').value,name=$('#draw-name').value||'Feature',layer=$('#draw-layer').value||'New features',desc=$('#draw-desc').value;
+   closeModal();
+   if(fieldDraw?.preview)map.removeLayer(fieldDraw.preview);
+   fieldVertices=[];fieldDraw={type,name,layer,desc,preview:null};
+   toast(type==='Point'?'Tap the map to place the point.':'Tap map to add vertices; double-tap is not required. Use Finish in the toolbar.',6000);
+   const old=$('#btn-digitize');old.textContent='Finish';
+   old.onclick=()=>finishDigitize(fieldVertices);
+   if(type==='Point')old.textContent='Cancel point';
+ };
+}
+function finishDigitize(coords){
+ if(!fieldDraw)return;
+ const d=fieldDraw;
+ if(d.preview)map.removeLayer(d.preview);
+ fieldDraw=null;fieldVertices=[];
+ $('#btn-digitize').textContent='+ Feature';$('#btn-digitize').onclick=()=>openDigitizeDialog();
+ if(d.type!=='Point'&&coords.length<(d.type==='LineString'?2:3)){toast('Not enough vertices to create this geometry');return}
+ let geometry;
+ if(d.type==='Point')geometry={type:'Point',coordinates:coords[0]};
+ else if(d.type==='LineString')geometry={type:'LineString',coordinates:coords};
+ else geometry={type:'Polygon',coordinates:[[...coords,coords[0]]]};
+ const props={name:d.name,description:d.desc,created_at:new Date().toISOString()};
+ const l=addVector(d.layer,fc([{type:'Feature',properties:props,geometry}]));
+ toast('Feature created: '+d.name);
+}
+
 /* ---------- UI ---------- */
 function showTab(t){$$('#tabs button').forEach(b=>b.classList.toggle('on',b.dataset.tab===t));
  const side=$('#side');const isMapView=['map','layers','tools'].includes(t);
@@ -564,7 +632,7 @@ function initMap(){map=L.map('map',{zoomControl:true}).setView([23.8,90.4],7);ma
  loadCss(['vendor/leaflet.css','https://unpkg.com/leaflet@1.9.4/dist/leaflet.css']);
  const ok=await loadLib(['vendor/leaflet.js','https://unpkg.com/leaflet@1.9.4/dist/leaflet.js'],()=>window.L);
  if(!ok){document.body.insertAdjacentHTML('afterbegin','<p style="padding:20px">Could not load the map library. Connect to the internet and reload (or bundle libs into www/vendor).</p>');return}
- initMap();initUI();
+ initMap();initUI();initFieldTools();
  [['vendor/turf.min.js','https://unpkg.com/@turf/turf@6.5.0/turf.min.js','turf'],['vendor/geotiff.js','https://unpkg.com/geotiff@2.1.3/dist-browser/geotiff.js','GeoTIFF'],['vendor/shp.min.js','https://unpkg.com/shpjs@4.0.4/dist/shp.min.js','shp'],['vendor/togeojson.umd.js','https://unpkg.com/@tmcw/togeojson@5.8.1/dist/togeojson.umd.js','toGeoJSON'],['vendor/html2canvas.min.js','https://unpkg.com/html2canvas@1.4.1/dist/html2canvas.min.js','html2canvas']]
   .forEach(([a,b,g])=>loadLib([a,b],()=>window[g]).then(r=>{if(!r)console.warn('missing lib',g)}));
  if('serviceWorker' in navigator&&location.protocol.startsWith('http')&&!(window.Capacitor&&Capacitor.isNativePlatform&&Capacitor.isNativePlatform()))navigator.serviceWorker.register('sw.js').catch(()=>{});
