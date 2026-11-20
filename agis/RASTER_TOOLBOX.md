@@ -16,6 +16,10 @@ This module adds local raster processing for the `agis-from-scratch` Android/Web
 | Slope | GeoTIFF.js typed-array engine | Horn 3×3 derivative; degrees. |
 | Aspect | GeoTIFF.js typed-array engine | Horn 3×3 derivative; degrees clockwise from north. |
 | Hillshade | GeoTIFF.js typed-array engine | Analytical hillshade, azimuth 315°, altitude 45°. |
+| D8 Flow Direction | Custom D8 graph engine | ESRI direction codes; steepest downslope neighbour. |
+| D8 Flow Accumulation | Custom D8 graph engine | Upstream contributing-cell count. |
+| Stream Extraction | Custom D8 graph engine | Threshold on contributing-cell count. |
+| Topographic Wetness Index | Custom D8 graph engine | ln(contributing area / tan(slope)).
 | Raster Information | GeoTIFF.js | Dimensions, bands, origin, resolution, bounds and EPSG metadata. |
 
 ## Output
@@ -24,8 +28,8 @@ All processing outputs are GeoTIFF. The UI also offers a FileGDB export attempt.
 
 ## Mobile safety limits
 
-The raster calculator is capped at 16 million cells, reclassification at 20 million cells, and terrain derivatives at 12 million cells to reduce Android WebView out-of-memory failures. Large inputs should be clipped or resampled before analysis.
+The raster calculator is capped at 16 million cells, reclassification at 20 million cells, and terrain derivatives at 12 million cells, and D8 hydrology at 8.5 million cells to reduce Android WebView out-of-memory failures. Large inputs should be clipped or resampled before analysis.
 
 ## Not yet implemented
 
-The full toolbox roadmap still includes multi-input mosaic/merge, virtual raster building, polygonization, rasterization, contours, D8 flow direction/accumulation, watershed, stream extraction, TWI, NoData editing, statistics/overviews, and persistent FileGDB raster update workflows. These must not be presented as operational until their algorithms and output validation are added.
+The full toolbox roadmap still includes multi-input mosaic/merge, virtual raster building, polygonization, rasterization, contours, watershed delineation, NoData editing, statistics/overviews, and persistent FileGDB raster update workflows. These must not be presented as operational until their algorithms and output validation are added.
