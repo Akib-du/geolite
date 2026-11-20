@@ -185,12 +185,12 @@ async function hydrology(file, kind, params, name, onProgress) {
   const gtNoData=Number(image.fileDirectory?.GDAL_NODATA);
   const valid=v=>Number.isFinite(v)&&(!Number.isFinite(gtNoData)||v!==gtNoData);
   const dirs=[{dx:1,dy:0,code:1},{dx:1,dy:1,code:2},{dx:0,dy:1,code:4},{dx:-1,dy:1,code:8},{dx:-1,dy:0,code:16},{dx:-1,dy:-1,code:32},{dx:0,dy:-1,code:64},{dx:1,dy:-1,code:128}];
-  const flow=new Uint8Array(count),down=new Int32Array(count);down.fill(-1);
+  const flow=new Float32Array(count);flow.fill(noDataValue);const down=new Int32Array(count);down.fill(-1);
   const indegree=new Uint8Array(count);
   const slope=new Float32Array(count);slope.fill(noDataValue);
   for(let y=1;y<height-1;y++){
     for(let x=1;x<width-1;x++){
-      const i=y*width+x,z=src[i];if(!valid(z))continue;
+      const i=y*width+x,z=src[i];if(!valid(z))continue;flow[i]=0;
       const z1=src[i-width-1],z2=src[i-width],z3=src[i-width+1],z4=src[i-1],z6=src[i+1],z7=src[i+width-1],z8=src[i+width],z9=src[i+width+1];
       if(![z1,z2,z3,z4,z6,z7,z8,z9].every(valid))continue;
       const gx=((z3+2*z6+z9)-(z1+2*z4+z7))/(8*dx),gy=((z7+2*z8+z9)-(z1+2*z2+z3))/(8*dy);
@@ -207,7 +207,7 @@ async function hydrology(file, kind, params, name, onProgress) {
     if(y%Math.max(1,Math.floor(height/30))===0)onProgress?.('D8 direction: '+Math.round(y/height*100)+'%');
   }
   if(kind==='flowdir')return writeFloatRaster(new Float32Array(flow),image,name);
-  const accumulation=new Float32Array(count),queue=new Uint32Array(count);
+  const accumulation=new Float32Array(count);accumulation.fill(noDataValue);for(let i=0;i<count;i++)if(valid(src[i]))accumulation[i]=0;const queue=new Uint32Array(count);
   let head=0,tail=0;
   for(let i=0;i<count;i++)if(valid(src[i])&&indegree[i]===0)queue[tail++]=i;
   while(head<tail){
