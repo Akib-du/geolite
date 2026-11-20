@@ -238,7 +238,7 @@ async function hydrology(file, kind, params, name, onProgress) {
     const out=new Float32Array(count);
     for(let i=0;i<count;i++){
       const tan=Math.tan(slope[i]),area=(accumulation[i]+1)*Math.sqrt(dx*dy);
-      out[i]=valid(src[i])&&Number.isFinite(tan)&&tan>0?Math.log(area/tan):noDataValue;
+      out[i]=valid(src[i])&&slope[i]!==noDataValue&&Number.isFinite(tan)?Math.log(area/Math.max(tan,0.001)):noDataValue;
     }
     return writeFloatRaster(out,image,name);
   }
