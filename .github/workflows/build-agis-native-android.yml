@@ -28,6 +28,17 @@ jobs:
           yes | "$SDKMANAGER" --licenses
           "$SDKMANAGER" "ndk;27.0.12077973" "platforms;android-35" "build-tools;35.0.0"
           echo "$ANDROID_HOME/platform-tools" >> "$GITHUB_PATH"
+      - name: Install Linux build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            autoconf \
+            autoconf-archive \
+            automake \
+            libtool \
+            libtool-bin \
+            pkg-config \
+            build-essential
       - name: Install vcpkg and build Android GDAL
         run: |
           git clone https://github.com/microsoft/vcpkg.git "$RUNNER_TEMP/vcpkg"
