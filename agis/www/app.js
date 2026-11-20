@@ -28,7 +28,7 @@ async function openFiles(files){
     imported.forEach(item=>{
       const layer=addLayer(item.name,item.data,item.type);
       layer.metadata=item.metadata;
-      if(item.type==='raster'){const source=item.metadata?.source||'';const matched=selected.find(f=>source.endsWith(f.name))||selected.find(f=>/\\.(tif|tiff|geotiff)$/i.test(f.name));layer.sourceFiles=matched?[matched]:[];}
+      if(item.type==='raster'){const source=item.metadata?.source||'';const matched=selected.find(f=>source.endsWith(f.name))||selected.find(f=>/\.(tif|tiff|geotiff)$/i.test(f.name));layer.sourceFiles=matched?[matched]:[];}
     });
     const newest=state.layers.at(-1);
     if(newest?.leaflet){const bounds=newest.leaflet.getBounds();if(bounds.isValid())map.fitBounds(bounds,{padding:[20,20]});}
