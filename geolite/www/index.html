@@ -1,0 +1,574 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#1f6f4a">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon-192.png">
+<title>GeoLite Mobile</title>
+<style>
+*{box-sizing:border-box}
+html,body{margin:0;height:100%;font:14px/1.35 system-ui,-apple-system,Segoe UI,Roboto,sans-serif;color:#1c2421;background:#f3f5f4}
+body{display:flex;flex-direction:column;height:100dvh;overflow:hidden}
+#hdr{background:#1f6f4a;color:#fff;display:flex;align-items:center;gap:8px;padding:8px 10px;padding-top:max(8px,env(safe-area-inset-top))}
+#hdr h1{font-size:16px;margin:0;flex:1;font-weight:600}
+button,select,input[type=number],input[type=text],textarea{font:inherit}
+button{background:#fff;color:#1f6f4a;border:1px solid #1f6f4a;border-radius:6px;padding:6px 10px;cursor:pointer}
+button.pri{background:#1f6f4a;color:#fff}
+button.sm{padding:3px 7px;font-size:12px}
+#hdr button{border-color:#fff}
+#main{flex:1;position:relative;min-height:0}
+.view{position:absolute;inset:0;display:none}
+.view.on{display:flex}
+#view-map{flex-direction:row}
+#map{flex:1;min-width:0;height:100%}
+#side{width:360px;max-width:100%;overflow:auto;background:#fff;border-right:1px solid #cfd6d2;padding:10px;display:none}
+#side.on{display:block}
+@media(max-width:760px){#side{position:absolute;inset:0;width:auto;z-index:1000}}
+#coord{position:absolute;left:8px;bottom:8px;z-index:500;background:rgba(255,255,255,.85);padding:2px 6px;border-radius:4px;font-size:11px;pointer-events:none}
+#tabs{display:flex;background:#fff;border-top:1px solid #cfd6d2;padding-bottom:env(safe-area-inset-bottom)}
+#tabs button{flex:1;border:0;border-radius:0;background:#fff;color:#55615b;padding:10px 2px;font-size:12px}
+#tabs button.on{color:#1f6f4a;font-weight:700;box-shadow:inset 0 3px 0 #1f6f4a}
+h3{margin:4px 0 8px}
+label{display:block;margin:6px 0}
+label select,label input[type=number],label input[type=text]{width:100%;padding:5px;margin-top:2px}
+.row{display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-bottom:8px}
+.layer{border:1px solid #dbe1de;border-radius:8px;padding:6px 8px;margin-bottom:6px;background:#fafcfb}
+.layer .top{display:flex;align-items:center;gap:6px}
+.layer b{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.layer small{color:#68746e}
+.layer .btns{display:flex;gap:4px;flex-wrap:wrap;margin-top:5px}
+.sw{width:14px;height:14px;border-radius:3px;border:1px solid #0004;display:inline-block}
+#modal{position:fixed;inset:0;background:#0007;z-index:5000;display:none;align-items:center;justify-content:center;padding:10px}
+#modal.on{display:flex}
+#modalBody{background:#fff;border-radius:10px;padding:14px;max-width:560px;width:100%;max-height:88vh;overflow:auto}
+#modalBody.wide{max-width:95vw}
+table.at{border-collapse:collapse;font-size:12px}
+table.at th,table.at td{border:1px solid #d4dad7;padding:2px 6px;white-space:nowrap}
+table.at th{background:#eef2f0;position:sticky;top:0}
+.cl{display:flex;align-items:center;gap:8px;margin:3px 0}
+.cl input{width:38px;height:24px;padding:0;border:0}
+fieldset{border:1px solid #dbe1de;border-radius:8px;margin:8px 0}
+legend{font-size:12px;color:#55615b}
+#toast{position:fixed;left:50%;bottom:70px;transform:translateX(-50%);background:#222;color:#fff;padding:8px 14px;border-radius:8px;z-index:6000;display:none;max-width:90vw}
+.lbl{background:transparent;border:0;box-shadow:none;font-size:11px;font-weight:600;color:#111;text-shadow:0 0 3px #fff,0 0 3px #fff}
+.lbl:before{display:none}
+.tb{display:flex;gap:6px;flex-wrap:wrap;align-items:center;padding:6px;background:#fff;border-bottom:1px solid #cfd6d2}
+#view-layout,#view-python{flex-direction:column}
+#lay-scroll{flex:1;overflow:auto;background:#8a928e;padding:8px}
+#lay-wrap{position:relative}
+#page{background:#fff;transform-origin:0 0;position:absolute;left:0;top:0;display:flex;flex-direction:column;padding:28px;gap:10px;box-shadow:0 2px 10px #0006;color:#111}
+.p-title{font-size:30px;font-weight:700;outline:none;border-bottom:3px solid #1f6f4a;padding-bottom:4px}
+.p-body{flex:1;display:flex;gap:14px;min-height:0}
+#lay-map{flex:1;border:2px solid #222;min-width:0}
+.p-side{width:230px;display:flex;flex-direction:column;gap:10px}
+.box{border:1px solid #888;padding:8px;font-size:13px}
+.box b{display:block;margin-bottom:4px}
+.lg-l{margin-bottom:6px}.lg-l>div{display:flex;align-items:center;gap:6px;font-size:12px}
+.lg-sw{width:16px;height:12px;border:1px solid #0006;display:inline-block;flex:none}
+.p-foot{display:flex;justify-content:space-between;font-size:12px;color:#444;gap:10px}
+.p-foot span{outline:none}
+#py-code{flex:1;min-height:120px;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:13px;padding:8px;border:0;border-bottom:1px solid #cfd6d2;resize:none;width:100%}
+#py-out{height:34%;margin:0;overflow:auto;background:#10201a;color:#d6f5e4;padding:8px;font-size:12px;white-space:pre-wrap}
+@media print{
+ body.printing{display:block;height:auto;overflow:visible;background:#fff}
+ body.printing #hdr,body.printing #tabs,body.printing .tb,body.printing #toast{display:none!important}
+ body.printing #main{position:static}
+ body.printing .view:not(#view-layout){display:none!important}
+ body.printing #view-layout{position:static;display:block}
+ body.printing #lay-scroll{overflow:visible;padding:0;background:#fff}
+ body.printing #page{box-shadow:none;transform:none!important;position:static}
+ body.printing #lay-wrap{width:auto!important;height:auto!important}
+ @page{margin:0}
+}
+<style id="leaflet-min">
+.leaflet-pane,.leaflet-tile,.leaflet-marker-icon,.leaflet-marker-shadow,.leaflet-tile-container,.leaflet-pane>svg,.leaflet-pane>canvas,.leaflet-zoom-box,.leaflet-image-layer,.leaflet-layer{position:absolute;left:0;top:0}
+.leaflet-container{overflow:hidden;background:#e4e9e6;-webkit-tap-highlight-color:transparent;font-family:inherit}
+.leaflet-tile,.leaflet-marker-icon,.leaflet-marker-shadow{user-select:none;-webkit-user-drag:none;display:block}
+.leaflet-container .leaflet-overlay-pane svg{max-width:none!important;max-height:none!important}
+.leaflet-container .leaflet-marker-pane img,.leaflet-container .leaflet-tile-pane img,.leaflet-container img.leaflet-image-layer,.leaflet-container .leaflet-tile{max-width:none!important;max-height:none!important;width:auto;padding:0}
+.leaflet-container.leaflet-touch-zoom{touch-action:pan-x pan-y}
+.leaflet-container.leaflet-touch-drag{touch-action:none}
+.leaflet-container.leaflet-touch-drag.leaflet-touch-zoom{touch-action:none}
+.leaflet-tile{visibility:hidden}.leaflet-tile-loaded{visibility:inherit}
+.leaflet-zoom-box{width:0;height:0;box-sizing:border-box;z-index:800}
+.leaflet-pane{z-index:400}.leaflet-tile-pane{z-index:200}.leaflet-overlay-pane{z-index:400}.leaflet-shadow-pane{z-index:500}.leaflet-marker-pane{z-index:600}.leaflet-tooltip-pane{z-index:650}.leaflet-popup-pane{z-index:700}
+.leaflet-map-pane canvas{z-index:100}.leaflet-map-pane svg{z-index:200}
+.leaflet-control{position:relative;z-index:800;pointer-events:auto;float:left;clear:both}
+.leaflet-top,.leaflet-bottom{position:absolute;z-index:1000;pointer-events:none}
+.leaflet-top{top:0}.leaflet-right{right:0}.leaflet-bottom{bottom:0}.leaflet-left{left:0}
+.leaflet-right .leaflet-control{float:right}
+.leaflet-top .leaflet-control{margin-top:10px}.leaflet-bottom .leaflet-control{margin-bottom:10px}
+.leaflet-left .leaflet-control{margin-left:10px}.leaflet-right .leaflet-control{margin-right:10px}
+.leaflet-fade-anim .leaflet-popup{opacity:0;transition:opacity .2s linear}.leaflet-fade-anim .leaflet-map-pane .leaflet-popup{opacity:1}
+.leaflet-zoom-animated{transform-origin:0 0}svg.leaflet-zoom-animated{will-change:transform}
+.leaflet-zoom-anim .leaflet-zoom-animated{transition:transform .25s cubic-bezier(0,0,.25,1)}
+.leaflet-zoom-anim .leaflet-tile,.leaflet-pan-anim .leaflet-tile{transition:none}
+.leaflet-zoom-anim .leaflet-zoom-hide{visibility:hidden}
+.leaflet-interactive{cursor:pointer}.leaflet-grab{cursor:grab}
+.leaflet-dragging .leaflet-grab,.leaflet-dragging .leaflet-grab .leaflet-interactive{cursor:grabbing}
+.leaflet-marker-icon,.leaflet-marker-shadow,.leaflet-image-layer,.leaflet-pane>svg path,.leaflet-tile-container{pointer-events:none}
+.leaflet-marker-icon.leaflet-interactive,.leaflet-image-layer.leaflet-interactive,.leaflet-pane>svg path.leaflet-interactive{pointer-events:auto}
+.leaflet-bar{box-shadow:0 1px 5px rgba(0,0,0,.45);border-radius:4px}
+.leaflet-bar a{background:#fff;border-bottom:1px solid #ccc;width:30px;height:30px;line-height:30px;display:block;text-align:center;text-decoration:none;color:#000}
+.leaflet-bar a:first-child{border-top-left-radius:4px;border-top-right-radius:4px}
+.leaflet-bar a:last-child{border-bottom-left-radius:4px;border-bottom-right-radius:4px;border-bottom:none}
+.leaflet-control-zoom-in,.leaflet-control-zoom-out{font:bold 18px monospace}
+.leaflet-control-attribution,.leaflet-control-scale-line{padding:0 5px;color:#333;line-height:1.4}
+.leaflet-control-attribution{background:rgba(255,255,255,.8);margin:0;font-size:11px}
+.leaflet-control-scale-line{border:2px solid #777;border-top:none;line-height:1.1;padding:2px 5px 1px;white-space:nowrap;background:rgba(255,255,255,.8);font-size:11px}
+.leaflet-control-scale-line:not(:first-child){border-top:2px solid #777;border-bottom:none;margin-top:-2px}
+.leaflet-popup{position:absolute;text-align:center;margin-bottom:20px}
+.leaflet-popup-content-wrapper{padding:1px;text-align:left;border-radius:10px;background:#fff;box-shadow:0 3px 14px rgba(0,0,0,.4)}
+.leaflet-popup-content{margin:10px 22px 10px 14px;line-height:1.3;font-size:13px;min-height:1px}
+.leaflet-popup-tip-container{width:40px;height:20px;position:absolute;left:50%;margin-top:-1px;margin-left:-20px;overflow:hidden;pointer-events:none}
+.leaflet-popup-tip{width:17px;height:17px;padding:1px;margin:-10px auto 0;transform:rotate(45deg);background:#fff;box-shadow:0 3px 14px rgba(0,0,0,.4)}
+.leaflet-container a.leaflet-popup-close-button{position:absolute;top:0;right:0;width:24px;height:24px;font:16px/24px sans-serif;color:#757575;text-decoration:none;text-align:center}
+.leaflet-tooltip{position:absolute;padding:4px 6px;background:#fff;border:1px solid #fff;border-radius:3px;color:#222;white-space:nowrap;user-select:none;pointer-events:none;box-shadow:0 1px 3px rgba(0,0,0,.4)}
+</style>
+</head>
+<body>
+<div id="hdr"><h1>GeoLite Mobile</h1>
+ <button id="btn-open">+ Open data</button>
+ <input type="file" id="file" multiple hidden>
+</div>
+<div id="main">
+ <section id="view-map" class="view on">
+  <div id="side"></div>
+  <div id="map"></div><div id="coord"></div>
+ </section>
+ <section id="view-layout" class="view">
+  <div class="tb">
+   <select id="lay-size"><option value="A4">A4</option><option value="A3">A3</option><option value="Letter">Letter</option></select>
+   <select id="lay-orient"><option value="l">Landscape</option><option value="p">Portrait</option></select>
+   <label style="margin:0"><input type="checkbox" id="lay-base" checked> Basemap</label>
+   <button class="sm" id="lay-sync">Use map extent</button>
+   <button class="sm pri" id="lay-png">Export PNG</button>
+   <button class="sm" id="lay-print">Print / PDF</button>
+  </div>
+  <div id="lay-scroll"><div id="lay-wrap"><div id="page">
+    <div class="p-title" contenteditable="true">Map title</div>
+    <div class="p-body">
+      <div id="lay-map"></div>
+      <div class="p-side">
+        <div class="box"><b>Legend</b><div id="lay-legend"></div></div>
+        <div class="box" style="text-align:center"><b>North</b>
+          <svg width="46" height="60" viewBox="0 0 46 60"><polygon points="23,2 36,52 23,42 10,52" fill="#222"/><polygon points="23,2 23,42 10,52" fill="#fff" stroke="#222"/><text x="23" y="60" font-size="10" text-anchor="middle">N</text></svg></div>
+        <div class="box" contenteditable="true" style="flex:1;outline:none"><b>Notes</b>Edit this text.</div>
+      </div>
+    </div>
+    <div class="p-foot"><span contenteditable="true">Author</span><span id="lay-date"></span><span>Web Mercator (EPSG:3857)</span></div>
+  </div></div></div>
+ </section>
+ <section id="view-python" class="view">
+  <div class="tb">
+   <button class="sm pri" id="py-run">▶ Run</button>
+   <button class="sm" id="py-pkgs">Load numpy/pandas/shapely</button>
+   <select id="py-ex"><option value="">Examples…</option><option value="list">List layers</option><option value="stats">Area stats (pure Python)</option><option value="shp">Buffer with shapely</option></select>
+   <span id="py-status" style="font-size:12px;color:#68746e"></span>
+  </div>
+  <textarea id="py-code" spellcheck="false">print(layer_names())</textarea>
+  <pre id="py-out">Python runs in the browser (Pyodide). Helpers: layer_names(), get_layer(name), add_layer(name, geojson), zoom_to(name)
+First run downloads the Python runtime (~10 MB) and needs internet.</pre>
+ </section>
+</div>
+<div id="tabs">
+ <button data-tab="map" class="on">Map</button>
+ <button data-tab="layers">Layers</button>
+ <button data-tab="tools">Tools</button>
+ <button data-tab="layout">Layout</button>
+ <button data-tab="python">Python</button>
+</div>
+<div id="modal"><div id="modalBody"></div></div>
+<div id="toast"></div>
+
+<script>
+const WEB_ONLY=false; // true in the sandboxed hosted build: no tiles, copy-to-export
+window.L_DISABLE_3D = true; // friendlier to html2canvas export
+const $=(s,r=document)=>r.querySelector(s), $$=(s,r=document)=>[...r.querySelectorAll(s)];
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+let toastT;function toast(m,ms=3500){const t=$('#toast');t.textContent=m;t.style.display='block';clearTimeout(toastT);toastT=setTimeout(()=>t.style.display='none',ms)}
+
+/* ---------- library loading (local vendor/ first, CDN fallback) ---------- */
+function loadScript(src){return new Promise((res,rej)=>{const s=document.createElement('script');s.src=src;s.onload=()=>res(src);s.onerror=()=>{s.remove();rej(new Error(src))};document.head.appendChild(s)})}
+async function loadLib(urls,check){if(WEB_ONLY)urls=urls.filter(u=>!u.startsWith('vendor/'));if(check&&check())return urls[0];for(const u of urls){try{await loadScript(u);if(!check||check())return u}catch(e){}}return null}
+function loadCss(urls){if(WEB_ONLY)return;const l=document.createElement('link');l.rel='stylesheet';let i=0;l.href=urls[0];l.onerror=()=>{if(++i<urls.length)l.href=urls[i]};document.head.appendChild(l)}
+function need(g,label){if(!window[g])throw new Error((label||g)+' library not loaded. Connect to the internet once (or bundle libs) and reload.')}
+
+/* ---------- state ---------- */
+const S={layers:[],id:1};
+let map,layMap,layOsm,osm;
+const byId=id=>S.layers.find(l=>l.id==id);
+const byName=n=>S.layers.find(l=>l.name===n&&l.type==='vector');
+const fc=a=>({type:'FeatureCollection',features:a});
+
+/* ---------- colors ---------- */
+const PAL=['#3b82c4','#e07a3a','#3aa76d','#c4453b','#8a63c9','#d1a72e','#2aa6b8','#c4559e'];
+const RAMPS={Viridis:['#440154','#3b528b','#21908d','#5dc863','#fde725'],YlOrRd:['#ffffb2','#fecc5c','#fd8d3c','#f03b20','#bd0026'],Blues:['#eff3ff','#bdd7e7','#6baed6','#3182bd','#08519c'],RdYlGn:['#d7191c','#fdae61','#ffffbf','#a6d96a','#1a9641'],Spectral:['#d7191c','#fdae61','#ffffbf','#abdda4','#2b83ba'],Terrain:['#2b83ba','#abdda4','#ffffbf','#fdae61','#8c510a','#ffffff'],Grayscale:['#000000','#ffffff']};
+const hex2rgb=h=>{const n=parseInt(h.slice(1),16);return[(n>>16)&255,(n>>8)&255,n&255]};
+const rgb2hex=a=>'#'+a.map(v=>Math.round(v).toString(16).padStart(2,'0')).join('');
+function rampAt(name,t){const R=RAMPS[name]||RAMPS.Viridis;t=Math.min(1,Math.max(0,t));const x=t*(R.length-1),i=Math.min(R.length-2,Math.floor(x)),f=x-i,a=hex2rgb(R[i]),b=hex2rgb(R[i+1]);return a.map((v,k)=>v+(b[k]-v)*f)}
+const fmt=v=>+(+v).toPrecision(4);
+
+/* ---------- CRS math for rasters ---------- */
+const R_E=6378137;
+const mercY=lat=>R_E*Math.log(Math.tan(Math.PI/4+lat*Math.PI/360));
+const invMercLat=y=>(2*Math.atan(Math.exp(y/R_E))-Math.PI/2)*180/Math.PI;
+const WGS={a:6378137,f:1/298.257223563};WGS.e2=WGS.f*(2-WGS.f);WGS.ep2=WGS.e2/(1-WGS.e2);
+function utmFwd(lon,lat,zone,south){const {a,e2,ep2}=WGS,k0=0.9996,lon0=((zone-1)*6-180+3)*Math.PI/180,phi=lat*Math.PI/180,lam=lon*Math.PI/180;
+ const N=a/Math.sqrt(1-e2*Math.sin(phi)**2),T=Math.tan(phi)**2,C=ep2*Math.cos(phi)**2,A=Math.cos(phi)*(lam-lon0);
+ const M=a*((1-e2/4-3*e2*e2/64-5*e2**3/256)*phi-(3*e2/8+3*e2*e2/32+45*e2**3/1024)*Math.sin(2*phi)+(15*e2*e2/256+45*e2**3/1024)*Math.sin(4*phi)-(35*e2**3/3072)*Math.sin(6*phi));
+ const x=k0*N*(A+(1-T+C)*A**3/6+(5-18*T+T*T+72*C-58*ep2)*A**5/120)+500000;
+ let y=k0*(M+N*Math.tan(phi)*(A*A/2+(5-T+9*C+4*C*C)*A**4/24+(61-58*T+T*T+600*C-330*ep2)*A**6/720));
+ if(south)y+=1e7;return[x,y]}
+function utmInv(x,y,zone,south){const {a,e2,ep2}=WGS,k0=0.9996;x-=500000;if(south)y-=1e7;const lon0=((zone-1)*6-180+3)*Math.PI/180;
+ const M=y/k0,mu=M/(a*(1-e2/4-3*e2*e2/64-5*e2**3/256)),e1=(1-Math.sqrt(1-e2))/(1+Math.sqrt(1-e2));
+ const p1=mu+(3*e1/2-27*e1**3/32)*Math.sin(2*mu)+(21*e1*e1/16-55*e1**4/32)*Math.sin(4*mu)+(151*e1**3/96)*Math.sin(6*mu)+(1097*e1**4/512)*Math.sin(8*mu);
+ const N1=a/Math.sqrt(1-e2*Math.sin(p1)**2),T1=Math.tan(p1)**2,C1=ep2*Math.cos(p1)**2,R1=a*(1-e2)/Math.pow(1-e2*Math.sin(p1)**2,1.5),D=x/(N1*k0);
+ const phi=p1-(N1*Math.tan(p1)/R1)*(D*D/2-(5+3*T1+10*C1-4*C1*C1-9*ep2)*D**4/24+(61+90*T1+298*C1+45*T1*T1-252*ep2-3*C1*C1)*D**6/720);
+ const lam=lon0+(D-(1+2*T1+C1)*D**3/6+(5-2*C1+28*T1-3*C1*C1+8*ep2+24*T1*T1)*D**5/120)/Math.cos(p1);
+ return[lam*180/Math.PI,phi*180/Math.PI]}
+const MERC={fwd:(lo,la)=>[R_E*lo*Math.PI/180,mercY(la)],inv:(x,y)=>[x/R_E*180/Math.PI,invMercLat(y)]};
+function crsOf(keys){const e=keys.ProjectedCSTypeGeoKey||keys.GeographicTypeGeoKey;
+ if(!e||e===4326||e===4269||e===4283||e===32767)return{fwd:(lo,la)=>[lo,la],inv:(x,y)=>[x,y]};
+ if(e===3857||e===900913)return MERC;
+ if(e>=32601&&e<=32660){const z=e-32600;return{fwd:(lo,la)=>utmFwd(lo,la,z,false),inv:(x,y)=>utmInv(x,y,z,false)}}
+ if(e>=32701&&e<=32760){const z=e-32700;return{fwd:(lo,la)=>utmFwd(lo,la,z,true),inv:(x,y)=>utmInv(x,y,z,true)}}
+ throw new Error('Unsupported raster CRS EPSG:'+e+'. Use WGS84, Web Mercator or UTM (reproject first with QGIS/GDAL).')}
+
+/* ---------- layers ---------- */
+function geomKind(data){const k=new Set();for(const f of data.features){const t=f.geometry?.type||'';k.add(/Polygon/.test(t)?'polygon':/Line/.test(t)?'line':/Point/.test(t)?'point':'')}k.delete('');return k.size===1?[...k][0]:k.size?'mixed':'polygon'}
+function defaultStyle(kind,i){const c=PAL[i%PAL.length];return{mode:'single',fill:c,stroke:kind==='polygon'?'#333333':kind==='point'?'#ffffff':c,strokeW:kind==='line'?2.5:1,opacity:kind==='polygon'?0.6:0.9,radius:6,label:'',field:'',ramp:'Viridis',reverse:false,n:5,method:'equal',classes:[]}}
+function normFC(g){if(!g)throw new Error('Empty file');if(g.type==='FeatureCollection')return fc(g.features.filter(f=>f&&f.geometry).map(f=>({type:'Feature',properties:f.properties||{},geometry:f.geometry})));
+ if(g.type==='Feature')return fc([{type:'Feature',properties:g.properties||{},geometry:g.geometry}]);
+ if(g.type&&g.coordinates)return fc([{type:'Feature',properties:{},geometry:g}]);
+ if(g.type==='GeometryCollection')return fc(g.geometries.map(x=>({type:'Feature',properties:{},geometry:x})));
+ throw new Error('Not a GeoJSON file')}
+function addVector(name,data,style,visible=true,zoom=true){data=normFC(data);if(!data.features.length)throw new Error('No features in '+name);
+ const kind=geomKind(data);const l={id:S.id++,name,type:'vector',kind,data,visible,style:style||defaultStyle(kind,S.id),lyr:null,lyrL:null};
+ S.layers.unshift(l);afterChange();if(zoom)zoomTo(l,false);return l}
+function fieldsOf(l){const s=new Set();l.data.features.slice(0,200).forEach(f=>Object.keys(f.properties||{}).forEach(k=>s.add(k)));return[...s]}
+function isNumField(l,f){let n=0,c=0;for(const x of l.data.features.slice(0,200)){const v=x.properties?.[f];if(v===null||v===''||v===undefined)continue;c++;if(isFinite(parseFloat(v)))n++}return c>0&&n/c>.9}
+function removeLayer(id){const l=byId(id);if(!l)return;[[map,'lyr'],[layMap,'lyrL']].forEach(([m,k])=>{if(m&&l[k]&&m.hasLayer(l[k]))m.removeLayer(l[k])});S.layers=S.layers.filter(x=>x!==l);afterChange()}
+function zoomTo(l,switchTab=true){try{let b;if(l.type==='raster')b=L.latLngBounds(l.raster.bounds);else b=L.geoJSON(l.data).getBounds();if(b.isValid())map.fitBounds(b.pad(0.08),{maxZoom:19});if(switchTab)showTab('map')}catch(e){console.warn(e)}}
+
+/* ---------- symbology ---------- */
+function featColor(l,f){const st=l.style;if(st.mode==='cat'){const v=f.properties?.[st.field];const c=st.classes.find(c=>c.value===String(v));return c?c.color:'#999999'}
+ if(st.mode==='grad'){const v=parseFloat(f.properties?.[st.field]);if(!isFinite(v))return'#999999';const k=st.classes.find((c,i)=>v>=c.min&&(v<c.max||(i===st.classes.length-1&&v<=c.max)));return k?k.color:'#999999'}return st.fill}
+function styleFor(l,f){const st=l.style,t=f.geometry?.type||'';if(/Line/.test(t))return{color:st.mode==='single'?st.stroke:featColor(l,f),weight:st.strokeW,opacity:st.opacity};
+ return{color:st.stroke,weight:st.strokeW,opacity:1,fillColor:featColor(l,f),fillOpacity:st.opacity}}
+function classify(l,st){if(!st.field)return;
+ if(st.mode==='cat'){const vals=[...new Set(l.data.features.map(f=>f.properties?.[st.field]).filter(v=>v!=null).map(String))].sort().slice(0,60);
+  st.classes=vals.map((v,i)=>{let rgb;const t=vals.length>1?i/(vals.length-1):0.5;rgb=st.ramp==='Categorical'?hex2rgb(PAL[i%PAL.length]):rampAt(st.ramp,st.reverse?1-t:t);return{value:v,label:v,color:rgb2hex(rgb)}})}
+ else if(st.mode==='grad'){const vals=l.data.features.map(f=>parseFloat(f.properties?.[st.field])).filter(isFinite).sort((a,b)=>a-b);if(!vals.length){st.classes=[];return}
+  const n=Math.max(2,Math.min(12,+st.n||5)),br=[];for(let i=0;i<=n;i++)br.push(st.method==='quantile'?vals[Math.min(vals.length-1,Math.floor(i*(vals.length-1)/n))]:vals[0]+(vals[vals.length-1]-vals[0])*i/n);
+  st.classes=[];for(let i=0;i<n;i++){const t=i/(n-1);st.classes.push({min:br[i],max:br[i+1],label:fmt(br[i])+' – '+fmt(br[i+1]),color:rgb2hex(rampAt(st.ramp,st.reverse?1-t:t))})}}}
+
+/* ---------- leaflet layer builders ---------- */
+function popupHTML(f){const p=f.properties||{};const k=Object.keys(p).slice(0,40);return k.length?'<table class="at">'+k.map(x=>`<tr><th>${esc(x)}</th><td>${esc(p[x])}</td></tr>`).join('')+'</table>':'(no attributes)'}
+function makeLeaflet(l,pop){
+ if(l.type==='raster'){const r=l.raster;if(!r.url)r.url=renderRaster(l);return L.imageOverlay(r.url,r.bounds,{opacity:l.style.opacity,pane:'rasterPane',interactive:false})}
+ let n=0;
+ return L.geoJSON(l.data,{pointToLayer:(f,ll)=>L.circleMarker(ll,{...styleFor(l,f),radius:l.style.radius}),style:f=>styleFor(l,f),
+  onEachFeature:(f,lyr)=>{if(pop)lyr.bindPopup(()=>popupHTML(f),{maxHeight:240});const v=l.style.label&&f.properties?.[l.style.label];if(v!=null&&v!==false&&n++<500)lyr.bindTooltip(String(v),{permanent:true,direction:'center',className:'lbl'})}})}
+function syncOn(m,key,pop){if(!m)return;S.layers.forEach(l=>{if(l[key]&&m.hasLayer(l[key]))m.removeLayer(l[key])});
+ [...S.layers].reverse().forEach(l=>{if(!l.visible)return;if(!l[key])l[key]=makeLeaflet(l,pop);l[key].addTo(m)})}
+function invalidate(l){l.lyr=null;l.lyrL=null;if(l.raster)l.raster.url=null}
+function afterChange(){renderLayers();syncOn(map,'lyr',true);syncOn(layMap,'lyrL',false);renderLegend()}
+
+/* ---------- raster ---------- */
+async function addRasterFile(f,name){need('GeoTIFF','GeoTIFF reader');
+ const tiff=await GeoTIFF.fromArrayBuffer(await f.arrayBuffer()),img=await tiff.getImage();
+ const w0=img.getWidth(),h0=img.getHeight(),sc=Math.min(1,1600/Math.max(w0,h0)),w=Math.max(1,Math.round(w0*sc)),h=Math.max(1,Math.round(h0*sc));
+ const keys=img.getGeoKeys()||{};const crs=crsOf(keys);let bb;try{bb=img.getBoundingBox()}catch(e){throw new Error('Raster has no usable georeference')}
+ const rs=await img.readRasters({width:w,height:h,resampleMethod:'nearest'});
+ const bands=[];for(let i=0;i<rs.length;i++)bands.push(rs[i]);
+ const nodata=img.getGDALNoData();
+ let mn=Infinity,mx=-Infinity;const b0=bands[0];for(let i=0;i<b0.length;i++){const v=b0[i];if(v===nodata||!isFinite(v))continue;if(v<mn)mn=v;if(v>mx)mx=v}
+ const bmm=bands.slice(0,3).map(b=>{let a=Infinity,z=-Infinity;for(let i=0;i<b.length;i+=7){const v=b[i];if(v===nodata||!isFinite(v))continue;if(v<a)a=v;if(v>z)z=v}return[a,z]});
+ const cs=[crs.inv(bb[0],bb[1]),crs.inv(bb[2],bb[1]),crs.inv(bb[0],bb[3]),crs.inv(bb[2],bb[3])];
+ const west=Math.min(...cs.map(c=>c[0])),east=Math.max(...cs.map(c=>c[0])),south=Math.min(...cs.map(c=>c[1])),north=Math.max(...cs.map(c=>c[1]));
+ if(!(west>=-180&&east<=180&&south>=-85&&north<=85))throw new Error('Raster extent looks invalid for its CRS');
+ const outW=w,outH=h,yMin=mercY(south),yMax=mercY(north),lut=new Int32Array(outW*outH).fill(-1);
+ for(let j=0;j<outH;j++){const lat=invMercLat(yMax-(j+.5)/outH*(yMax-yMin));for(let i=0;i<outW;i++){const lon=west+(i+.5)/outW*(east-west),p=crs.fwd(lon,lat);
+  const col=Math.floor((p[0]-bb[0])/(bb[2]-bb[0])*w),row=Math.floor((bb[3]-p[1])/(bb[3]-bb[1])*h);if(col>=0&&col<w&&row>=0&&row<h)lut[j*outW+i]=row*w+col}}
+ const rgb=bands.length>=3;
+ const l={id:S.id++,name,type:'raster',kind:'raster',visible:true,lyr:null,lyrL:null,
+  style:{opacity:0.9,ramp:'Viridis',reverse:false,min:mn,max:mx},raster:{bands,nodata,w,h,outW,outH,lut,rgb,bmm,min:mn,max:mx,bounds:[[south,west],[north,east]],crs,bb,url:null}};
+ S.layers.unshift(l);afterChange();zoomTo(l,false);toast(`${name}: ${w0}×${h0}${sc<1?' (downsampled to '+w+'×'+h+')':''}, ${bands.length} band(s)`)}
+/* raster built from computed values on a Web-Mercator-linear grid */
+function addComputedRaster(name,bands,w,h,bounds,zoom=true){const [[s,we],[n,e]]=bounds,bb=[R_E*we*Math.PI/180,mercY(s),R_E*e*Math.PI/180,mercY(n)];
+ let mn=Infinity,mx=-Infinity;const b0=bands[0];for(let i=0;i<b0.length;i++){const v=b0[i];if(!isFinite(v))continue;if(v<mn)mn=v;if(v>mx)mx=v}if(!isFinite(mn)){mn=0;mx=1}
+ const lut=new Int32Array(w*h);for(let i=0;i<lut.length;i++)lut[i]=i;
+ const l={id:S.id++,name,type:'raster',kind:'raster',visible:true,lyr:null,lyrL:null,style:{opacity:0.9,ramp:'Viridis',reverse:false,min:mn,max:mx},
+  raster:{bands,nodata:null,w,h,outW:w,outH:h,lut,rgb:false,bmm:[[mn,mx]],min:mn,max:mx,bounds,crs:MERC,bb,url:null}};
+ S.layers.unshift(l);afterChange();if(zoom)zoomTo(l,false);return l}
+function loadSampleRaster(){const w=240,h=240,v=new Float32Array(w*h);for(let j=0;j<h;j++)for(let i=0;i<w;i++){const x=i/w*6.28,y=j/h*6.28;v[j*w+i]=50+30*Math.sin(x*1.3)*Math.cos(y)+15*Math.sin(x*3+y*2)+(i/w)*20}
+ addComputedRaster('sample_dem',[v],w,h,[[23.70,90.30],[23.90,90.50]]);toast('Sample raster "sample_dem" added')}
+
+/* ---------- raster calculator ---------- */
+const IF=(c,a,b)=>c?a:b;
+const CALC_FN={sqrt:'Math.sqrt',abs:'Math.abs',log10:'Math.log10',ln:'Math.log',log:'Math.log',exp:'Math.exp',sin:'Math.sin',cos:'Math.cos',tan:'Math.tan',atan:'Math.atan',min:'Math.min',max:'Math.max',pow:'Math.pow',floor:'Math.floor',ceil:'Math.ceil',round:'Math.round',if:'IF'};
+function compileCalc(expr){const refs=[],toks=[],s=expr;let i=0;
+ while(i<s.length){const c=s[i];if(/\s/.test(c)){i++;continue}
+  if(c==='"'){const j=s.indexOf('"',i+1);if(j<0)throw new Error('Unclosed quote');const m=/^(.*)@(\d+)$/.exec(s.slice(i+1,j));if(!m)throw new Error('Use "layer@band", e.g. "dem@1"');refs.push([m[1],+m[2]]);toks.push('v['+(refs.length-1)+']');i=j+1;continue}
+  const rest=s.slice(i);let m;
+  if((m=/^(\d+\.?\d*(e[+-]?\d+)?|\.\d+)/i.exec(rest))){toks.push(m[0]);i+=m[0].length;continue}
+  if((m=/^[A-Za-z_][A-Za-z0-9_]*/.exec(rest))){const w=m[0].toLowerCase();if(w==='and')toks.push('&&');else if(w==='or')toks.push('||');else if(w==='pi')toks.push('Math.PI');else if(CALC_FN[w])toks.push(CALC_FN[w]);else throw new Error('Unknown word: '+m[0]);i+=m[0].length;continue}
+  const two=rest.slice(0,2);if(two==='>='||two==='<='){toks.push(two);i+=2;continue}if(two==='!='){toks.push('!==');i+=2;continue}if(two==='=='){toks.push('===');i+=2;continue}
+  if(c==='='){toks.push('===');i++;continue}if(c==='^'){toks.push('**');i++;continue}
+  if('+-*/()<>,%'.includes(c)){toks.push(c);i++;continue}
+  throw new Error('Unexpected character: '+c)}
+ if(!toks.length)throw new Error('Enter an expression');
+ let fn;try{fn=new Function('v','IF','return ('+toks.join(' ')+')');fn(refs.map(()=>1),IF)}catch(e){throw new Error('Invalid expression ('+e.message+'). Tip: use pow(x,2) instead of -x^2')}
+ return{fn,refs}}
+function resampleLut(ref,o){const N=ref.outW*ref.outH,lut=new Int32Array(N).fill(-1),[[s,w],[n,e]]=ref.bounds,yMin=mercY(s),yMax=mercY(n),bb=o.bb;
+ for(let j=0;j<ref.outH;j++){const lat=invMercLat(yMax-(j+.5)/ref.outH*(yMax-yMin));for(let i=0;i<ref.outW;i++){const lon=w+(i+.5)/ref.outW*(e-w),p=o.crs.fwd(lon,lat),col=Math.floor((p[0]-bb[0])/(bb[2]-bb[0])*o.w),row=Math.floor((bb[3]-p[1])/(bb[3]-bb[1])*o.h);if(col>=0&&col<o.w&&row>=0&&row<o.h)lut[j*ref.outW+i]=row*o.w+col}}return lut}
+function runRasterCalc(expr,outName){const {fn,refs}=compileCalc(expr);if(!refs.length)throw new Error('Reference at least one raster band, e.g. "dem@1" * 2');
+ const rl=refs.map(([n,b])=>{const l=S.layers.find(x=>x.type==='raster'&&x.name===n);if(!l)throw new Error('No raster layer named "'+n+'"');if(b<1||b>l.raster.bands.length)throw new Error(`"${n}" has ${l.raster.bands.length} band(s)`);return{l,b:l.raster.bands[b-1]}});
+ const ref=rl[0].l.raster,N=ref.outW*ref.outH,luts=rl.map(({l})=>l===rl[0].l?ref.lut:resampleLut(ref,l.raster)),out=new Float32Array(N),v=new Array(rl.length);
+ for(let p=0;p<N;p++){let bad=false;for(let k=0;k<rl.length;k++){const ix=luts[k][p];if(ix<0){bad=true;break}const x=rl[k].b[ix];if(x===rl[k].l.raster.nodata||!isFinite(x)){bad=true;break}v[k]=x}
+  if(bad){out[p]=NaN;continue}const r=Number(fn(v,IF));out[p]=isFinite(r)?r:NaN}
+ return addComputedRaster(outName,[out],ref.outW,ref.outH,ref.bounds)}
+function renderRaster(l){const r=l.raster,st=l.style,cv=document.createElement('canvas');cv.width=r.outW;cv.height=r.outH;const ctx=cv.getContext('2d'),id=ctx.createImageData(r.outW,r.outH),d=id.data;
+ const lut256=[];for(let i=0;i<256;i++)lut256.push(rampAt(st.ramp,st.reverse?1-i/255:i/255));
+ const rng=(st.max-st.min)||1;
+ for(let p=0;p<r.lut.length;p++){const ix=r.lut[p];if(ix<0)continue;const o=p*4;
+  if(r.rgb){let ok=true;for(let b=0;b<3;b++){const v=r.bands[b][ix];if(v===r.nodata||!isFinite(v)){ok=false;break}const [a,z]=r.bmm[b];d[o+b]=(z<=255&&a>=0)?v:(v-a)/((z-a)||1)*255}if(!ok)continue;d[o+3]=255}
+  else{const v=r.bands[0][ix];if(v===r.nodata||!isFinite(v))continue;const c=lut256[Math.max(0,Math.min(255,Math.round((v-st.min)/rng*255)))];d[o]=c[0];d[o+1]=c[1];d[o+2]=c[2];d[o+3]=255}}
+ ctx.putImageData(id,0,0);return cv.toDataURL('image/png')}
+
+/* ---------- file import ---------- */
+function parseCSV(t){const rows=[];let row=[],cur='',q=false;for(let i=0;i<t.length;i++){const c=t[i];if(q){if(c=='"'){if(t[i+1]=='"'){cur+='"';i++}else q=false}else cur+=c}else if(c=='"')q=true;else if(c==','){row.push(cur);cur=''}else if(c=='\n'||c=='\r'){if(c=='\r'&&t[i+1]=='\n')i++;row.push(cur);cur='';if(row.length>1||row[0]!=='')rows.push(row);row=[]}else cur+=c}row.push(cur);if(row.length>1||row[0]!=='')rows.push(row);return rows}
+function csvToFC(text){const rows=parseCSV(text.replace(/^﻿/,''));if(rows.length<2)throw new Error('CSV is empty');const h=rows[0].map(s=>s.trim()),lh=h.map(s=>s.toLowerCase());
+ const xi=lh.findIndex(s=>['lon','lng','long','longitude','x'].includes(s)),yi=lh.findIndex(s=>['lat','latitude','y'].includes(s));if(xi<0||yi<0)throw new Error('CSV needs lat/lon (or x/y) columns');
+ const feats=[];for(const r of rows.slice(1)){const x=parseFloat(r[xi]),y=parseFloat(r[yi]);if(!isFinite(x)||!isFinite(y))continue;const p={};h.forEach((k,i)=>{if(i!==xi&&i!==yi||true){const v=r[i];p[k]=v!==''&&isFinite(+v)?+v:v}});feats.push({type:'Feature',properties:p,geometry:{type:'Point',coordinates:[x,y]}})}return fc(feats)}
+async function openFile(f){const n=f.name.toLowerCase(),base=f.name.replace(/\.[^.]+$/,'');
+ if(/\.tiff?$/.test(n))return addRasterFile(f,base);
+ if(n.endsWith('.zip')){need('shp','Shapefile reader');const r=await shp(await f.arrayBuffer());const a=Array.isArray(r)?r:[r];a.forEach(x=>addVector(a.length>1&&x.fileName?x.fileName:base,x));return}
+ const text=await f.text();
+ if(n.endsWith('.csv')||n.endsWith('.txt'))return addVector(base,csvToFC(text));
+ if(n.endsWith('.kml')||n.endsWith('.gpx')){need('toGeoJSON','KML/GPX reader');const d=new DOMParser().parseFromString(text,'text/xml');return addVector(base,n.endsWith('.kml')?toGeoJSON.kml(d):toGeoJSON.gpx(d))}
+ const j=JSON.parse(text);
+ if(j.geolite===1){S.layers.slice().forEach(l=>removeLayer(l.id));j.layers.slice().reverse().forEach(x=>addVector(x.name,x.data,x.style,x.visible,false));if(S.layers.length)zoomTo(S.layers[0],false);return toast('Project loaded')}
+ addVector(base,j)}
+async function openFiles(files){for(const f of files){try{await openFile(f)}catch(e){toast(`${f.name}: ${e.message}`,7000);console.error(e)}}}
+
+/* ---------- saving ---------- */
+function blobToB64(b){return new Promise(r=>{const fr=new FileReader();fr.onload=()=>r(String(fr.result).split(',')[1]);fr.readAsDataURL(b)})}
+async function saveFile(name,data,mime){if(WEB_ONLY)return showExport(name,data,mime);const blob=data instanceof Blob?data:new Blob([data],{type:mime||'application/octet-stream'});const C=window.Capacitor;
+ if(C&&C.isNativePlatform&&C.isNativePlatform()&&C.Plugins&&C.Plugins.Filesystem&&C.Plugins.Share){try{const r=await C.Plugins.Filesystem.writeFile({path:name,data:await blobToB64(blob),directory:'CACHE'});await C.Plugins.Share.share({title:name,url:r.uri});return}catch(e){toast('Save failed: '+e.message);return}}
+ const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=name;document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},1500)}
+async function showExport(name,data,mime){
+ if(data instanceof Blob&&/^image\//.test(data.type)){const url=await new Promise(r=>{const fr=new FileReader();fr.onload=()=>r(fr.result);fr.readAsDataURL(data)});
+  openModal(`<h3>${esc(name)}</h3><p><small>Downloads are blocked in this viewer. Long-press (phone) or right-click (desktop) the image and choose “Save image”.</small></p><div style="max-height:60vh;overflow:auto"><img src="${url}" style="max-width:100%"></div><p><button onclick="closeModal()">Close</button></p>`,true);return}
+ const text=data instanceof Blob?await data.text():String(data);
+ openModal(`<h3>${esc(name)}</h3><p><small>Downloads are blocked in this viewer. Copy the text and paste it into a file with this name.</small></p><textarea id="exp-t" readonly style="width:100%;height:40vh;font:12px ui-monospace,monospace"></textarea><div class="row"><button class="pri" id="exp-c">Copy</button><button onclick="closeModal()">Close</button></div>`,true);
+ const t=$('#exp-t');t.value=text;$('#exp-c').onclick=async()=>{try{await navigator.clipboard.writeText(text);toast('Copied')}catch(e){t.focus();t.select();toast('Select all and copy manually')}}}
+function saveProject(){const ls=S.layers.filter(l=>l.type==='vector');if(S.layers.some(l=>l.type==='raster'))toast('Rasters are not stored in project files');saveFile('project.geolite.json',JSON.stringify({geolite:1,layers:ls.map(l=>({name:l.name,data:l.data,style:l.style,visible:l.visible}))}),'application/json')}
+
+/* ---------- layers panel ---------- */
+function layerSwatch(l){if(l.type==='raster')return'linear-gradient(90deg,#440154,#21908d,#fde725)';if(l.style.mode!=='single')return'linear-gradient(90deg,'+l.style.classes.slice(0,8).map(c=>c.color).join(',')+')';return l.kind==='line'?l.style.stroke:l.style.fill}
+function renderLayers(){const el=$('#side-layers');if(!el)return;
+ el.innerHTML=`<h3>Layers</h3><div class="row"><button class="sm" data-g="sample">Load sample data</button><button class="sm" data-g="sampleras">Load sample raster</button><button class="sm" data-g="saveproj">Save project</button></div>
+ ${WEB_ONLY?'':`<label style="margin:0 0 8px"><input type="checkbox" id="osm-on" ${map.hasLayer(osm)?'checked':''}> OpenStreetMap basemap</label>`}`+
+ (S.layers.length?S.layers.map((l,i)=>`<div class="layer" data-id="${l.id}"><div class="top"><input type="checkbox" class="vis" ${l.visible?'checked':''}><span class="sw" style="background:${layerSwatch(l)}"></span><b title="${esc(l.name)}">${esc(l.name)}</b></div>
+  <small>${l.type==='raster'?`${l.raster.w}×${l.raster.h} raster, ${l.raster.bands.length} band(s)`:`${l.data.features.length} features · ${l.kind}`}</small>
+  <div class="btns"><button class="sm" data-a="zoom">Zoom</button><button class="sm" data-a="style">Style</button>${l.type==='vector'?'<button class="sm" data-a="table">Table</button><button class="sm" data-a="export">Export</button>':''}<button class="sm" data-a="up" ${i==0?'disabled':''}>↑</button><button class="sm" data-a="down" ${i==S.layers.length-1?'disabled':''}>↓</button><button class="sm" data-a="del">✕</button></div></div>`).join(''):'<p><small>No layers yet. Tap “+ Open data” (GeoJSON, zipped Shapefile, CSV, KML, GPX, GeoTIFF) or load the sample data.</small></p>')}
+function initLayersPanel(){const el=$('#side-layers');
+ el.addEventListener('click',e=>{const g=e.target.dataset.g;if(g==='sample')return loadSample();if(g==='sampleras')return loadSampleRaster();if(g==='saveproj')return saveProject();
+  const a=e.target.dataset.a,card=e.target.closest('.layer');if(!a||!card)return;const l=byId(card.dataset.id);if(!l)return;
+  if(a==='zoom')zoomTo(l);else if(a==='style')openStyle(l.id);else if(a==='table')openTable(l);
+  else if(a==='export')saveFile(l.name+'.geojson',JSON.stringify(l.data),'application/geo+json');
+  else if(a==='del'){if(confirm('Remove layer "'+l.name+'"?'))removeLayer(l.id)}
+  else{const i=S.layers.indexOf(l),j=a==='up'?i-1:i+1;if(j<0||j>=S.layers.length)return;[S.layers[i],S.layers[j]]=[S.layers[j],S.layers[i]];afterChange()}});
+ el.addEventListener('change',e=>{if(e.target.id==='osm-on'){e.target.checked?osm.addTo(map):map.removeLayer(osm);return}
+  if(e.target.classList.contains('vis')){const l=byId(e.target.closest('.layer').dataset.id);l.visible=e.target.checked;afterChange()}})}
+
+/* ---------- modal ---------- */
+function openModal(html,wide){$('#modalBody').className=wide?'wide':'';$('#modalBody').innerHTML=html;$('#modal').classList.add('on')}
+function closeModal(){$('#modal').classList.remove('on');$('#modalBody').innerHTML=''}
+$('#modal').addEventListener('click',e=>{if(e.target.id==='modal')closeModal()});
+function openTable(l){const fs=fieldsOf(l),rows=l.data.features.slice(0,300);
+ openModal(`<h3>${esc(l.name)} — ${l.data.features.length} features${l.data.features.length>300?' (first 300 shown)':''}</h3><div style="overflow:auto;max-height:65vh"><table class="at"><tr><th>#</th>${fs.map(f=>`<th>${esc(f)}</th>`).join('')}</tr>${rows.map((f,i)=>`<tr><td>${i+1}</td>${fs.map(k=>`<td>${esc(f.properties?.[k])}</td>`).join('')}</tr>`).join('')}</table></div><p><button onclick="closeModal()">Close</button></p>`,true)}
+
+/* ---------- style dialogs ---------- */
+function openStyle(id){const l=byId(id);if(!l)return;if(l.type==='raster')return openRasterStyle(l);
+ const st=JSON.parse(JSON.stringify(l.style)),fields=fieldsOf(l),numF=fields.filter(f=>isNumField(l,f));
+ const ramps=()=>(st.mode==='cat'?['Categorical']:[]).concat(Object.keys(RAMPS));
+ function read(){const g=i=>$('#'+i);if(g('s-mode'))st.mode=g('s-mode').value;if(g('s-field'))st.field=g('s-field').value;if(g('s-ramp'))st.ramp=g('s-ramp').value;if(g('s-rev'))st.reverse=g('s-rev').checked;if(g('s-n'))st.n=+g('s-n').value;if(g('s-method'))st.method=g('s-method').value;
+  st.fill=g('s-fill').value;st.stroke=g('s-stroke').value;st.strokeW=+g('s-sw').value;st.opacity=+g('s-op').value;st.radius=+g('s-rad').value;st.label=g('s-label').value}
+ function draw(){const list=st.mode==='grad'?numF:fields;if(st.mode!=='single'&&!list.includes(st.field))st.field=list[0]||'';if(!ramps().includes(st.ramp))st.ramp=ramps()[0];
+  openModal(`<h3>Symbology — ${esc(l.name)}</h3>
+  <label>Renderer <select id="s-mode"><option value="single" ${st.mode==='single'?'selected':''}>Single symbol</option><option value="cat" ${st.mode==='cat'?'selected':''}>Categorized</option><option value="grad" ${st.mode==='grad'?'selected':''}>Graduated (numeric)</option></select></label>
+  ${st.mode!=='single'?`<label>Field <select id="s-field">${list.map(f=>`<option ${f===st.field?'selected':''}>${esc(f)}</option>`).join('')}</select></label>
+   <label>Color ramp <select id="s-ramp">${ramps().map(r=>`<option ${r===st.ramp?'selected':''}>${r}</option>`).join('')}</select></label>
+   <label><input type="checkbox" id="s-rev" ${st.reverse?'checked':''}> Reverse ramp</label>
+   ${st.mode==='grad'?`<div class="row"><label style="flex:1">Classes <input type="number" id="s-n" min="2" max="12" value="${st.n}"></label><label style="flex:1">Method <select id="s-method"><option value="equal" ${st.method==='equal'?'selected':''}>Equal interval</option><option value="quantile" ${st.method==='quantile'?'selected':''}>Quantile</option></select></label></div>`:''}
+   <button id="s-class" class="sm">Classify</button><div style="max-height:160px;overflow:auto;margin-top:6px">${st.classes.map((c,i)=>`<div class="cl"><input type="color" data-i="${i}" value="${c.color}"><span>${esc(c.label)}</span></div>`).join('')}</div>`:''}
+  <fieldset><legend>Symbol</legend><div class="row"><label style="flex:1">Fill <input type="color" id="s-fill" value="${st.fill}" style="width:100%"></label><label style="flex:1">Outline / line <input type="color" id="s-stroke" value="${st.stroke}" style="width:100%"></label></div>
+  <div class="row"><label style="flex:1">Width <input type="number" id="s-sw" min="0" max="20" step="0.5" value="${st.strokeW}"></label><label style="flex:1">Point size <input type="number" id="s-rad" min="1" max="40" value="${st.radius}"></label></div>
+  <label>Opacity <input type="range" id="s-op" min="0.05" max="1" step="0.05" value="${st.opacity}" style="width:100%"></label></fieldset>
+  <label>Labels <select id="s-label"><option value="">(none)</option>${fields.map(f=>`<option ${f===st.label?'selected':''}>${esc(f)}</option>`).join('')}</select></label>
+  <div class="row"><button class="pri" id="s-apply">Apply</button><button onclick="closeModal()">Cancel</button></div>`);
+  $('#s-mode').onchange=()=>{read();st.classes=[];if(st.mode!=='single'){const li=st.mode==='grad'?numF:fields;st.field=li.includes(st.field)?st.field:(li[0]||'');st.ramp=st.mode==='cat'?'Categorical':'Viridis';classify(l,st)}draw()};
+  if($('#s-field'))$('#s-field').onchange=()=>{read();classify(l,st);draw()};
+  if($('#s-class'))$('#s-class').onclick=()=>{read();classify(l,st);draw()};
+  $$('.cl input').forEach(i=>i.oninput=()=>{st.classes[+i.dataset.i].color=i.value});
+  $('#s-apply').onclick=()=>{read();if(st.mode!=='single'&&!st.classes.length)classify(l,st);l.style=st;invalidate(l);closeModal();afterChange()}}
+ if(st.mode!=='single'&&!st.classes.length)classify(l,st);draw()}
+function openRasterStyle(l){const st=l.style,r=l.raster;
+ openModal(`<h3>Raster — ${esc(l.name)}</h3>${r.rgb?'<p><small>Multi-band image shown as RGB.</small></p>':`<label>Color ramp <select id="r-ramp">${Object.keys(RAMPS).map(k=>`<option ${k===st.ramp?'selected':''}>${k}</option>`).join('')}</select></label>
+ <label><input type="checkbox" id="r-rev" ${st.reverse?'checked':''}> Reverse</label>
+ <div class="row"><label style="flex:1">Min <input type="number" id="r-min" step="any" value="${st.min}"></label><label style="flex:1">Max <input type="number" id="r-max" step="any" value="${st.max}"></label></div>
+ <button class="sm" id="r-auto">Reset to data min/max</button>`}
+ <label>Opacity <input type="range" id="r-op" min="0.05" max="1" step="0.05" value="${st.opacity}" style="width:100%"></label>
+ <div class="row"><button class="pri" id="r-apply">Apply</button><button onclick="closeModal()">Cancel</button></div>`);
+ if($('#r-auto'))$('#r-auto').onclick=()=>{$('#r-min').value=r.min;$('#r-max').value=r.max};
+ $('#r-apply').onclick=()=>{st.opacity=+$('#r-op').value;if(!r.rgb){st.ramp=$('#r-ramp').value;st.reverse=$('#r-rev').checked;st.min=+$('#r-min').value;st.max=+$('#r-max').value}invalidate(l);closeModal();afterChange()}}
+
+/* ---------- geoprocessing (Turf.js) ---------- */
+const feats=l=>l.data.features.filter(f=>f.geometry);
+const flat=f=>turf.flatten(f).features;
+const polysOf=l=>feats(l).flatMap(f=>flat(f)).filter(g=>g.geometry.type==='Polygon');
+function unionAll(a){let u=null;for(const p of a){try{u=u?(turf.union(u,p)||u):p}catch(e){console.warn('union skip',e)}}return u}
+const P={area:(k,label,def)=>({k,t:'area',label,def}),layer:(k,label,geom)=>({k,t:'layer',label,geom}),num:(k,label,def)=>({k,t:'num',label,def}),sel:(k,label,opts)=>({k,t:'sel',label,opts}),chk:(k,label,def)=>({k,t:'chk',label,def}),field:(k,label,of)=>({k,t:'field',label,of}),text:(k,label,def)=>({k,t:'text',label,def}),extent:(k,label)=>({k,t:'extent',label})};
+const TOOLS=[
+ {name:'Raster calculator',raster:true,params:[P.area('expr','Expression','')],
+  run:(p,outName)=>{const l=runRasterCalc(p.expr,outName);return{raster:l}}},
+ {name:'Buffer',params:[P.layer('input','Input layer'),P.num('dist','Distance',1),P.sel('units','Units',['kilometers','meters','miles']),P.num('steps','Segments',8),P.chk('dissolve','Dissolve result')],
+  run:p=>{let out=feats(p.input).map(f=>{const b=turf.buffer(f,+p.dist,{units:p.units,steps:+p.steps});if(b)b.properties={...f.properties};return b}).filter(Boolean);if(p.dissolve){const u=unionAll(out);out=u?[u]:[]}return fc(out)}},
+ {name:'Clip',params:[P.layer('input','Input layer'),P.layer('overlay','Clip layer (polygons)','polygon')],
+  run:p=>{const mask=unionAll(polysOf(p.overlay));if(!mask)throw new Error('Clip layer has no polygons');const out=[];
+   for(const f of feats(p.input)){for(const g of flat(f)){const t=g.geometry.type;try{
+    if(t==='Polygon'){const i=turf.intersect(g,mask);if(i){i.properties={...f.properties};out.push(i)}}
+    else if(t==='Point'){if(turf.booleanPointInPolygon(g,mask))out.push(g)}
+    else if(t==='LineString'){const sp=turf.lineSplit(g,mask),segs=sp.features.length?sp.features:[g];for(const s of segs){const mid=turf.along(s,turf.length(s)/2);if(turf.booleanPointInPolygon(mid,mask)){s.properties={...f.properties};out.push(s)}}}}catch(e){console.warn(e)}}}
+   return fc(out)}},
+ {name:'Intersection',params:[P.layer('input','Input polygons','polygon'),P.layer('overlay','Overlay polygons','polygon')],
+  run:p=>{const A=polysOf(p.input),B=polysOf(p.overlay),out=[];for(const a of A){const ba=turf.bbox(a);for(const b of B){const bb=turf.bbox(b);if(ba[0]>bb[2]||ba[2]<bb[0]||ba[1]>bb[3]||ba[3]<bb[1])continue;try{const i=turf.intersect(a,b);if(i){i.properties={...a.properties,...b.properties};out.push(i)}}catch(e){}}}return fc(out)}},
+ {name:'Difference',params:[P.layer('input','Input polygons','polygon'),P.layer('overlay','Subtract polygons','polygon')],
+  run:p=>{const m=unionAll(polysOf(p.overlay)),out=[];for(const a of polysOf(p.input)){try{const d=m?turf.difference(a,m):a;if(d){d.properties={...a.properties};out.push(d)}}catch(e){}}return fc(out)}},
+ {name:'Union (merge all)',params:[P.layer('input','Input polygons','polygon')],run:p=>{const u=unionAll(polysOf(p.input));if(u)u.properties={};return fc(u?[u]:[])}},
+ {name:'Dissolve by field',params:[P.layer('input','Input polygons','polygon'),P.field('field','Dissolve field','input')],
+  run:p=>{const g={};for(const f of polysOf(p.input)){const k=String(f.properties?.[p.field]);(g[k]=g[k]||[]).push(f)}return fc(Object.entries(g).map(([k,a])=>{const u=unionAll(a);if(u)u.properties={[p.field]:k};return u}).filter(Boolean))}},
+ {name:'Centroids',params:[P.layer('input','Input layer')],run:p=>fc(feats(p.input).map(f=>turf.centroid(f,{properties:{...f.properties}})))},
+ {name:'Convex hull',params:[P.layer('input','Input layer')],run:p=>{const h=turf.convex(p.input.data);return fc(h?[h]:[])}},
+ {name:'Bounding box',params:[P.layer('input','Input layer')],run:p=>fc([turf.bboxPolygon(turf.bbox(p.input.data))])},
+ {name:'Simplify',params:[P.layer('input','Input layer'),P.num('tol','Tolerance (degrees)',0.001),P.chk('hq','High quality')],
+  run:p=>fc(feats(p.input).map(f=>/Point/.test(f.geometry.type)?f:turf.simplify(f,{tolerance:+p.tol,highQuality:p.hq,mutate:false})))},
+ {name:'Voronoi polygons',params:[P.layer('input','Input points','point')],
+  run:p=>{const pts=feats(p.input).flatMap(f=>flat(f)).filter(g=>g.geometry.type==='Point');if(pts.length<2)throw new Error('Need at least 2 points');const b=turf.bbox(fc(pts)),dx=(b[2]-b[0])*.1||.01,dy=(b[3]-b[1])*.1||.01;
+   const v=turf.voronoi(fc(pts),{bbox:[b[0]-dx,b[1]-dy,b[2]+dx,b[3]+dy]});return fc(v.features.map((c,i)=>{if(c)c.properties={...pts[i].properties};return c}).filter(Boolean))}},
+ {name:'Create grid',params:[P.extent('extent','Extent'),P.sel('type','Grid type',['square','hex','triangle']),P.num('size','Cell size (km)',5)],
+  run:p=>{const bb=p.extent==='view'?(b=>[b.getWest(),b.getSouth(),b.getEast(),b.getNorth()])(map.getBounds()):turf.bbox(byId(p.extent).data),cs=+p.size;
+   const w=turf.distance([bb[0],bb[1]],[bb[2],bb[1]]),h=turf.distance([bb[0],bb[1]],[bb[0],bb[3]]);if(w*h/(cs*cs)>30000)throw new Error('Too many cells — increase cell size');
+   const o={units:'kilometers'},g=p.type==='hex'?turf.hexGrid(bb,cs,o):p.type==='triangle'?turf.triangleGrid(bb,cs,o):turf.squareGrid(bb,cs,o);g.features.forEach((f,i)=>f.properties={id:i+1});return g}},
+ {name:'Points in polygons (select)',params:[P.layer('input','Points','point'),P.layer('overlay','Polygons','polygon')],
+  run:p=>fc(turf.pointsWithinPolygon(fc(feats(p.input).flatMap(f=>flat(f)).filter(g=>g.geometry.type==='Point')),fc(polysOf(p.overlay))).features)},
+ {name:'Count points in polygons',params:[P.layer('overlay','Polygons','polygon'),P.layer('input','Points','point')],
+  run:p=>{const pts=fc(feats(p.input).flatMap(f=>flat(f)).filter(g=>g.geometry.type==='Point'));return fc(polysOf(p.overlay).map(a=>({...a,properties:{...a.properties,count:turf.pointsWithinPolygon(pts,a).features.length}})))}},
+ {name:'Add geometry attributes',params:[P.layer('input','Input layer')],
+  run:p=>fc(feats(p.input).map(f=>{const t=f.geometry.type,q={...f.properties};if(/Polygon/.test(t)){q.area_km2=+(turf.area(f)/1e6).toFixed(6);q.perim_km=+flat(f).reduce((s,g)=>s+turf.length(turf.polygonToLine(g)),0).toFixed(4)}else if(/Line/.test(t))q.length_km=+turf.length(f).toFixed(4);else{const c=turf.centroid(f).geometry.coordinates;q.lon=c[0];q.lat=c[1]}return{...f,properties:q}}))},
+ {name:'Extract by attribute',params:[P.layer('input','Input layer'),P.field('field','Field','input'),P.sel('op','Operator',['=','≠','>','<','≥','≤','contains']),P.text('value','Value','')],
+  run:p=>{const v=p.value,nv=parseFloat(v);return fc(feats(p.input).filter(f=>{const x=f.properties?.[p.field];const xs=String(x),xn=parseFloat(x);switch(p.op){case'=':return xs===v||(isFinite(xn)&&xn===nv);case'≠':return!(xs===v||(isFinite(xn)&&xn===nv));case'>':return xn>nv;case'<':return xn<nv;case'≥':return xn>=nv;case'≤':return xn<=nv;default:return xs.toLowerCase().includes(v.toLowerCase())}}))}}
+];
+function renderTools(){const el=$('#side-tools');const cur=el.dataset.tool?+el.dataset.tool:0,T=TOOLS[cur];
+ const vecs=S.layers.filter(l=>l.type==='vector');
+ const opts=(geom)=>vecs.filter(l=>!geom||l.kind===geom||l.kind==='mixed').map(l=>`<option value="${l.id}">${esc(l.name)}</option>`).join('');
+ el.innerHTML=`<h3>Geoprocessing</h3><label>Tool <select id="t-tool">${TOOLS.map((t,i)=>`<option value="${i}" ${i===cur?'selected':''}>${t.name}</option>`).join('')}</select></label>
+ <div id="t-form">${T.params.map(q=>{const id='t-'+q.k;
+  if(q.t==='layer')return`<label>${q.label}<select id="${id}" data-lay="1">${opts(q.geom)||'<option value="">(no suitable layer)</option>'}</select></label>`;
+  if(q.t==='area')return`<label>${q.label}<textarea id="${id}" rows="3" spellcheck="false" style="width:100%;font-family:ui-monospace,Menlo,monospace;font-size:13px;padding:5px" placeholder='("nir@1" - "red@1") / ("nir@1" + "red@1")'>${esc(q.def)}</textarea></label>
+   <div class="row" id="t-chips">${S.layers.filter(l=>l.type==='raster').flatMap(l=>l.raster.bands.map((b,i)=>`<button class="sm" data-ins="${esc('"'+l.name+'@'+(i+1)+'"')}">${esc(l.name)}@${i+1}</button>`)).join('')||'<small>Load a raster first (Layers → Load sample raster, or Open data).</small>'}</div>
+   <div class="row">${['+','-','*','/','^','(',')','sqrt(','abs(','ln(','min(','max(','if(','>','<','>=','<=','=',','].map(o=>`<button class="sm" data-ins="${esc(o)}">${esc(o)}</button>`).join('')}</div>
+   <small>Use "layer@band" references. Supports + − * / ^ comparisons, and/or, sqrt abs ln log10 exp sin cos tan min max pow floor ceil round, if(cond,a,b). Result uses the first raster's grid; other rasters are resampled to it.</small>`;
+  if(q.t==='num')return`<label>${q.label}<input type="number" step="any" id="${id}" value="${q.def}"></label>`;
+  if(q.t==='text')return`<label>${q.label}<input type="text" id="${id}" value="${esc(q.def)}"></label>`;
+  if(q.t==='chk')return`<label><input type="checkbox" id="${id}" ${q.def?'checked':''}> ${q.label}</label>`;
+  if(q.t==='sel')return`<label>${q.label}<select id="${id}">${q.opts.map(o=>`<option>${o}</option>`).join('')}</select></label>`;
+  if(q.t==='extent')return`<label>${q.label}<select id="${id}"><option value="view">Current map view</option>${opts()}</select></label>`;
+  if(q.t==='field')return`<label>${q.label}<select id="${id}" data-of="${q.of}"></select></label>`}).join('')}</div>
+ <label>Output name <input type="text" id="t-out" value=""></label><button class="pri" id="t-run">Run</button><p><small>Distances use geodesic units (km/m). Results are added as new layers.</small></p>`;
+ const fillFields=()=>$$('[data-of]',el).forEach(s=>{const lid=$('#t-'+s.dataset.of).value,l=byId(lid);s.innerHTML=l?fieldsOf(l).map(f=>`<option>${esc(f)}</option>`).join(''):''});
+ fillFields();$$('[data-lay]',el).forEach(s=>s.onchange=fillFields);
+ const defName=()=>{const i=$('#t-input');return T.name+(i&&byId(i.value)?': '+byId(i.value).name:'')};$('#t-out').value=defName();$$('[data-lay]',el).forEach(s=>s.addEventListener('change',()=>$('#t-out').value=defName()));
+ $('#t-tool').onchange=e=>{el.dataset.tool=e.target.value;renderTools()};
+ $$('[data-ins]',el).forEach(b=>b.onclick=()=>{const t=$('#t-expr');if(!t)return;const s=t.selectionStart??t.value.length,e=t.selectionEnd??s,ins=b.dataset.ins,sp=/^[+\-*\/^<>=]/.test(ins)?' '+ins+' ':ins;t.value=t.value.slice(0,s)+sp+t.value.slice(e);t.focus();t.selectionStart=t.selectionEnd=s+sp.length});
+ if(T.raster)$('#t-out').value='Raster calc';
+ $('#t-run').onclick=()=>{const p={};try{if(!T.raster)need('turf','Turf.js');
+   for(const q of T.params){const e=$('#t-'+q.k);if(q.t==='layer'){const l=byId(e.value);if(!l)throw new Error('Choose a layer for "'+q.label+'"');p[q.k]=l}else if(q.t==='chk')p[q.k]=e.checked;else p[q.k]=e.value}
+   toast('Running '+T.name+'…',30000);setTimeout(()=>{try{const out=T.run(p,$('#t-out').value||T.name);if(out&&out.raster){toast(`${T.name}: raster "${out.raster.name}" created`);if(innerWidth<=760)showTab('map');return}if(!out.features.length){toast('Tool produced no features');return}const l=addVector($('#t-out').value||T.name,out);toast(`${T.name}: ${l.data.features.length} feature(s) created`);if(innerWidth<=760)showTab('map')}catch(e){toast('Error: '+e.message,8000);console.error(e)}},30)}catch(e){toast(e.message,6000)}}}
+
+/* ---------- legend + layout ---------- */
+function legendHTML(){return S.layers.filter(l=>l.visible).map(l=>{const st=l.style;let items='';
+ if(l.type==='raster')items=l.raster.rgb?'<div><span class="lg-sw" style="background:linear-gradient(90deg,red,lime,blue)"></span>RGB image</div>':`<div style="display:block"><span class="lg-sw" style="width:100%;height:10px;background:linear-gradient(90deg,${[0,.25,.5,.75,1].map(t=>rgb2hex(rampAt(st.ramp,st.reverse?1-t:t))).join(',')})"></span><div style="justify-content:space-between"><span>${fmt(st.min)}</span><span>${fmt(st.max)}</span></div></div>`;
+ else if(st.mode==='single')items=`<div><span class="lg-sw" style="background:${l.kind==='line'?st.stroke:st.fill};${l.kind==='point'?'border-radius:50%;width:12px;':''}"></span>${esc(l.name)}</div>`;
+ else items=st.classes.slice(0,14).map(c=>`<div><span class="lg-sw" style="background:${c.color}"></span>${esc(c.label)}</div>`).join('');
+ return`<div class="lg-l"><b style="margin:0">${esc(l.name)}</b>${st.mode&&st.mode!=='single'?`<small>${esc(st.field)}</small>`:''}${items}</div>`}).join('')||'<small>No layers</small>'}
+function renderLegend(){const e=$('#lay-legend');if(e)e.innerHTML=legendHTML()}
+const PAGES={A4:[1123,794],A3:[1587,1123],Letter:[1056,816]};let layK=1;
+function layoutSize(){let [w,h]=PAGES[$('#lay-size').value];if($('#lay-orient').value==='p')[w,h]=[h,w];const pg=$('#page');pg.style.width=w+'px';pg.style.height=h+'px';
+ layK=Math.min(1,($('#lay-scroll').clientWidth-16)/w);pg.style.transform=`scale(${layK})`;const wr=$('#lay-wrap');wr.style.width=w*layK+'px';wr.style.height=h*layK+'px';setTimeout(()=>layMap&&layMap.invalidateSize(),50)}
+function initLayoutMap(){if(layMap)return;layMap=L.map('lay-map',{zoomControl:false,attributionControl:false,zoomSnap:0.25}).setView(map.getCenter(),map.getZoom());layMap.createPane('rasterPane').style.zIndex=250;
+ layOsm=L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,crossOrigin:true});if(!WEB_ONLY)layOsm.addTo(layMap);L.control.scale({imperial:false,position:'bottomleft'}).addTo(layMap);$('#lay-date').textContent=new Date().toLocaleDateString()}
+function syncLayoutExtent(){layoutSize();layMap.invalidateSize();layMap.fitBounds(map.getBounds())}
+async function exportPNG(){try{need('html2canvas','html2canvas');const pg=$('#page'),old=pg.style.transform;pg.style.transform='none';await new Promise(r=>setTimeout(r,250));
+ const cv=await html2canvas(pg,{useCORS:true,scale:2,backgroundColor:'#ffffff'});pg.style.transform=old;cv.toBlob(b=>saveFile('layout.png',b,'image/png'))}catch(e){layoutSize();toast('PNG export failed: '+e.message+'. Try Print/PDF.',7000)}}
+
+/* ---------- Python (Pyodide) ---------- */
+let pyo=null,pyLoading=null;const pyOut=s=>{const o=$('#py-out');o.textContent+=s+'\n';o.scrollTop=o.scrollHeight};
+async function initPy(){if(pyo)return pyo;if(pyLoading)return pyLoading;pyLoading=(async()=>{$('#py-status').textContent='Loading Python…';
+ const u='https://cdn.jsdelivr.net/pyodide/v0.26.4/full/';if(!window.loadPyodide)await loadScript(u+'pyodide.js');
+ const p=await loadPyodide({indexURL:u});p.setStdout({batched:pyOut});p.setStderr({batched:pyOut});
+ p.registerJsModule('qgisjs',{layer_names:()=>JSON.stringify(S.layers.filter(l=>l.type==='vector').map(l=>l.name)),get_layer:n=>{const l=byName(n);if(!l)throw new Error('No vector layer named '+n);return JSON.stringify(l.data)},add_layer:(n,s)=>{addVector(n,JSON.parse(s))},zoom_to:n=>{const l=byName(n);if(l){zoomTo(l);}}});
+ await p.runPythonAsync(`import json, qgisjs\ndef layer_names(): return json.loads(qgisjs.layer_names())\ndef get_layer(name): return json.loads(qgisjs.get_layer(name))\ndef add_layer(name, geojson): qgisjs.add_layer(name, json.dumps(geojson))\ndef zoom_to(name): qgisjs.zoom_to(name)`);
+ pyo=p;$('#py-status').textContent='Python ready';return p})().catch(e=>{pyLoading=null;$('#py-status').textContent='';throw e});return pyLoading}
+async function runPy(){const code=$('#py-code').value;pyOut('>>> run');try{const p=await initPy();const r=await p.runPythonAsync(code);if(r!==undefined&&r!==null)pyOut(String(r))}catch(e){pyOut(String(e.message||e).split('\n').slice(-6).join('\n'))}}
+const PY_EX={list:`for n in layer_names():\n    print(n, len(get_layer(n)['features']), 'features')`,
+ stats:`# Rough planar bbox area stats (pure Python)\nname = layer_names()[0]\nvals = []\nfor f in get_layer(name)['features']:\n    g = f['geometry']\n    pts = g['coordinates'] if g['type']=='Point' else None\n    vals.append(f['properties'])\nprint(name, len(vals), 'features')\nprint('fields:', list(vals[0].keys()) if vals else [])`,
+ shp:`# click "Load numpy/pandas/shapely" first\nfrom shapely.geometry import shape, mapping\nname = layer_names()[0]\nfc = get_layer(name)\nout = []\nfor f in fc['features']:\n    out.append({'type':'Feature','properties':f['properties'],'geometry':mapping(shape(f['geometry']).buffer(0.01))})\nadd_layer(name + ' buffered', {'type':'FeatureCollection','features':out})`};
+
+/* ---------- sample data ---------- */
+function loadSample(){let s=7;const rnd=()=>(s=(s*16807)%2147483647)/2147483647;const polys=[],pts=[];
+ for(let i=0;i<5;i++)for(let j=0;j<5;j++){const x=90.30+i*.04,y=23.70+j*.04;polys.push({type:'Feature',properties:{id:i*5+j+1,zone:['North','South','East','West','Central'][(i+j)%5],pop:Math.round(2000+rnd()*18000)},geometry:{type:'Polygon',coordinates:[[[x,y],[x+.04,y],[x+.04,y+.04],[x,y+.04],[x,y]]]}})}
+ for(let k=0;k<40;k++)pts.push({type:'Feature',properties:{name:'P'+(k+1),kind:['school','clinic','market'][k%3],score:Math.round(rnd()*100)},geometry:{type:'Point',coordinates:[90.30+rnd()*.2,23.70+rnd()*.2]}});
+ addVector('sample_zones',fc(polys),null,true,false);addVector('sample_points',fc(pts));toast('Sample layers added')}
+
+/* ---------- UI ---------- */
+function showTab(t){$$('#tabs button').forEach(b=>b.classList.toggle('on',b.dataset.tab===t));
+ const side=$('#side');const isMapView=['map','layers','tools'].includes(t);
+ $('#view-map').classList.toggle('on',isMapView);$('#view-layout').classList.toggle('on',t==='layout');$('#view-python').classList.toggle('on',t==='python');
+ side.classList.toggle('on',t==='layers'||t==='tools');$('#side-layers').style.display=t==='layers'?'block':'none';$('#side-tools').style.display=t==='tools'?'block':'none';
+ if(t==='tools')renderTools();if(t==='layers')renderLayers();
+ if(isMapView)setTimeout(()=>map.invalidateSize(),50);
+ if(t==='layout'){initLayoutMap();syncOn(layMap,'lyrL',false);renderLegend();layoutSize();if(!layMap._fitted){layMap._fitted=true;syncLayoutExtent()}}}
+function initUI(){
+ if(WEB_ONLY){$('#lay-base').checked=false;$('#lay-base').parentElement.style.display='none';$('#lay-print').style.display='none'}
+ $('#side').innerHTML='<div id="side-layers"></div><div id="side-tools" style="display:none"></div>';initLayersPanel();renderLayers();
+ $$('#tabs button').forEach(b=>b.onclick=()=>showTab(b.dataset.tab));
+ $('#btn-open').onclick=()=>$('#file').click();$('#file').onchange=e=>{openFiles([...e.target.files]);e.target.value='';showTab('map')};
+ addEventListener('dragover',e=>e.preventDefault());addEventListener('drop',e=>{e.preventDefault();openFiles([...e.dataTransfer.files])});
+ $('#lay-size').onchange=$('#lay-orient').onchange=()=>layoutSize();addEventListener('resize',()=>{if($('#view-layout').classList.contains('on'))layoutSize()});
+ $('#lay-sync').onclick=syncLayoutExtent;$('#lay-base').onchange=e=>e.target.checked?layOsm.addTo(layMap):layMap.removeLayer(layOsm);
+ $('#lay-png').onclick=exportPNG;$('#lay-print').onclick=()=>{layoutSize();document.body.classList.add('printing');setTimeout(()=>{window.print();setTimeout(()=>{document.body.classList.remove('printing');layoutSize()},500)},100)};
+ $('#py-run').onclick=runPy;$('#py-code').addEventListener('keydown',e=>{if(e.key==='Enter'&&(e.ctrlKey||e.metaKey)){e.preventDefault();runPy()}});
+ $('#py-ex').onchange=e=>{if(PY_EX[e.target.value])$('#py-code').value=PY_EX[e.target.value];e.target.value=''};
+ $('#py-pkgs').onclick=async()=>{try{const p=await initPy();$('#py-status').textContent='Installing packages…';await p.loadPackage(['numpy','pandas','shapely']);$('#py-status').textContent='Packages ready';pyOut('numpy, pandas, shapely loaded')}catch(e){pyOut('Could not load packages: '+e.message)}}}
+function initMap(){map=L.map('map',{zoomControl:true}).setView([23.8,90.4],7);map.createPane('rasterPane').style.zIndex=250;
+ osm=L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'© OpenStreetMap contributors',crossOrigin:true});if(!WEB_ONLY)osm.addTo(map);L.control.scale({imperial:false}).addTo(map);
+ map.on('mousemove',e=>$('#coord').textContent=e.latlng.lat.toFixed(5)+', '+e.latlng.lng.toFixed(5))}
+
+(async function boot(){
+ loadCss(['vendor/leaflet.css','https://unpkg.com/leaflet@1.9.4/dist/leaflet.css']);
+ const ok=await loadLib(['vendor/leaflet.js','https://unpkg.com/leaflet@1.9.4/dist/leaflet.js'],()=>window.L);
+ if(!ok){document.body.insertAdjacentHTML('afterbegin','<p style="padding:20px">Could not load the map library. Connect to the internet and reload (or bundle libs into www/vendor).</p>');return}
+ initMap();initUI();
+ [['vendor/turf.min.js','https://unpkg.com/@turf/turf@6.5.0/turf.min.js','turf'],['vendor/geotiff.js','https://unpkg.com/geotiff@2.1.3/dist-browser/geotiff.js','GeoTIFF'],['vendor/shp.min.js','https://unpkg.com/shpjs@4.0.4/dist/shp.min.js','shp'],['vendor/togeojson.umd.js','https://unpkg.com/@tmcw/togeojson@5.8.1/dist/togeojson.umd.js','toGeoJSON'],['vendor/html2canvas.min.js','https://unpkg.com/html2canvas@1.4.1/dist/html2canvas.min.js','html2canvas']]
+  .forEach(([a,b,g])=>loadLib([a,b],()=>window[g]).then(r=>{if(!r)console.warn('missing lib',g)}));
+ if('serviceWorker' in navigator&&location.protocol.startsWith('http')&&!(window.Capacitor&&Capacitor.isNativePlatform&&Capacitor.isNativePlatform()))navigator.serviceWorker.register('sw.js').catch(()=>{});
+})();
+</script>
+</body>
+</html>

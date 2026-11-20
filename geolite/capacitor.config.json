@@ -1,0 +1,6 @@
+{
+  "appId": "com.geolite.mobile",
+  "appName": "GeoLite",
+  "webDir": "www",
+  "server": { "androidScheme": "https" }
+}
