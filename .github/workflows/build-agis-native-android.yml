@@ -12,6 +12,8 @@ jobs:
   build:
     runs-on: ubuntu-24.04
     timeout-minutes: 180
+    env:
+      ANDROID_HOME: /usr/local/lib/android/sdk
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -20,10 +22,12 @@ jobs:
         with:
           distribution: temurin
           java-version: '17'
-      - name: Set up Android SDK
-        uses: android-actions/setup-android@v3
-      - name: Install Android NDK
-        run: sdkmanager "ndk;27.0.12077973" "platforms;android-35" "build-tools;35.0.0"
+      - name: Install Android SDK components
+        run: |
+          SDKMANAGER="$(find "$ANDROID_HOME/cmdline-tools" -type f -name sdkmanager | sort | tail -n 1)"
+          yes | "$SDKMANAGER" --licenses
+          "$SDKMANAGER" "ndk;27.0.12077973" "platforms;android-35" "build-tools;35.0.0"
+          echo "$ANDROID_HOME/platform-tools" >> "$GITHUB_PATH"
       - name: Install vcpkg and build Android GDAL
         run: |
           git clone https://github.com/microsoft/vcpkg.git "$RUNNER_TEMP/vcpkg"
