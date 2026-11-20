@@ -381,11 +381,11 @@ function renderLayers(){const el=$('#side-layers');if(!el)return;
  ${WEB_ONLY?'':`<label style="margin:0 0 8px"><input type="checkbox" id="osm-on" ${map.hasLayer(osm)?'checked':''}> OpenStreetMap basemap</label>`}`+
  (S.layers.length?S.layers.map((l,i)=>`<div class="layer" data-id="${l.id}"><div class="top"><input type="checkbox" class="vis" ${l.visible?'checked':''}><span class="sw" style="background:${layerSwatch(l)}"></span><b title="${esc(l.name)}">${esc(l.name)}</b></div>
   <small>${l.type==='raster'?`${l.raster.w}×${l.raster.h} raster, ${l.raster.bands.length} band(s)`:`${l.data.features.length} features · ${l.kind}`}</small>
-  <div class="btns"><button class="sm" data-a="zoom">Zoom</button><button class="sm" data-a="style">Style</button>${l.type==='vector'?'<button class="sm" data-a="table">Table</button><button class="sm" data-a="export">Export</button>':''}<button class="sm" data-a="up" ${i==0?'disabled':''}>↑</button><button class="sm" data-a="down" ${i==S.layers.length-1?'disabled':''}>↓</button><button class="sm" data-a="del">✕</button></div></div>`).join(''):'<p><small>No layers yet. Tap “+ Open data” (GeoJSON, zipped Shapefile, CSV, KML, GPX, GeoTIFF) or load the sample data.</small></p>')}
+  <div class="btns"><button class="sm" data-a="zoom">Zoom</button><button class="sm" data-a="style">Style</button>${l.type==='vector'?'<button class="sm" data-a="table">Table</button><button class="sm" data-a="edit">Edit</button><button class="sm" data-a="export">Export</button>':''}<button class="sm" data-a="up" ${i==0?'disabled':''}>↑</button><button class="sm" data-a="down" ${i==S.layers.length-1?'disabled':''}>↓</button><button class="sm" data-a="del">✕</button></div></div>`).join(''):'<p><small>No layers yet. Tap “+ Open data” (GeoJSON, zipped Shapefile, CSV, KML, GPX, GeoTIFF) or load the sample data.</small></p>')}
 function initLayersPanel(){const el=$('#side-layers');
  el.addEventListener('click',e=>{const g=e.target.dataset.g;if(g==='sample')return loadSample();if(g==='sampleras')return loadSampleRaster();if(g==='saveproj')return saveProject();
   const a=e.target.dataset.a,card=e.target.closest('.layer');if(!a||!card)return;const l=byId(card.dataset.id);if(!l)return;
-  if(a==='zoom')zoomTo(l);else if(a==='style')openStyle(l.id);else if(a==='table')openTable(l);
+  if(a==='zoom')zoomTo(l);else if(a==='style')openStyle(l.id);else if(a==='table')openTable(l);else if(a==='edit')openEditTable(l);
   else if(a==='export')saveFile(l.name+'.geojson',JSON.stringify(l.data),'application/geo+json');
   else if(a==='del'){if(confirm('Remove layer "'+l.name+'"?'))removeLayer(l.id)}
   else{const i=S.layers.indexOf(l),j=a==='up'?i-1:i+1;if(j<0||j>=S.layers.length)return;[S.layers[i],S.layers[j]]=[S.layers[j],S.layers[i]];afterChange()}});
@@ -396,6 +396,18 @@ function initLayersPanel(){const el=$('#side-layers');
 function openModal(html,wide){$('#modalBody').className=wide?'wide':'';$('#modalBody').innerHTML=html;$('#modal').classList.add('on')}
 function closeModal(){$('#modal').classList.remove('on');$('#modalBody').innerHTML=''}
 $('#modal').addEventListener('click',e=>{if(e.target.id==='modal')closeModal()});
+function openEditTable(l){
+ const fs=fieldsOf(l),rows=l.data.features.slice(0,150);
+ openModal('<h3>Edit attributes — '+esc(l.name)+'</h3><p><small>Editable first '+rows.length+' of '+l.data.features.length+' features. Save applies changes to this GeoLite layer.</small></p><div style="overflow:auto;max-height:62vh"><table class="at"><tr><th>#</th>'+fs.map(k=>'<th>'+esc(k)+'</th>').join('')+'</tr>'+rows.map((f,i)=>'<tr><td>'+(i+1)+'</td>'+fs.map(k=>'<td><input data-edit-row="'+i+'" data-edit-field="'+esc(k)+'" value="'+esc(f.properties?.[k]??'')+'" style="min-width:90px;width:100%;padding:3px"></td>').join('')+'</tr>').join('')+'</table></div><div class="row"><button class="pri" id="edit-save">Save changes</button><button id="edit-cancel">Cancel</button></div>',true);
+ $('#edit-cancel').onclick=closeModal;
+ $('#edit-save').onclick=()=>{
+  $('[data-edit-row]').forEach(inp=>{const i=+inp.dataset.editRow,k=inp.dataset.editField,old=l.data.features[i].properties?.[k],v=inp.value;
+   let value=v;if(typeof old==='number'&&v.trim()!==''&&isFinite(Number(v)))value=Number(v);else if(typeof old==='boolean')value=v==='true';
+   l.data.features[i].properties[k]=value;
+  });
+  invalidate(l);afterChange();closeModal();toast('Attribute edits saved');
+ };
+}
 function openTable(l){const fs=fieldsOf(l),rows=l.data.features.slice(0,300);
  openModal(`<h3>${esc(l.name)} — ${l.data.features.length} features${l.data.features.length>300?' (first 300 shown)':''}</h3><div style="overflow:auto;max-height:65vh"><table class="at"><tr><th>#</th>${fs.map(f=>`<th>${esc(f)}</th>`).join('')}</tr>${rows.map((f,i)=>`<tr><td>${i+1}</td>${fs.map(k=>`<td>${esc(f.properties?.[k])}</td>`).join('')}</tr>`).join('')}</table></div><p><button onclick="closeModal()">Close</button></p>`,true)}
 
