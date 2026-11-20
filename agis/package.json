@@ -5,9 +5,8 @@
   "description": "aGIS — mobile GIS workspace",
   "type": "module",
   "scripts": {
-    "vendor": "node scripts/vendor.mjs",
-    "android": "npx cap add android && npx cap sync android",
-    "build": "npm run vendor && npx cap sync android"
+    "build": "vite build",
+    "android": "npm run build && npx cap add android && npx cap sync android"
   },
   "dependencies": {
     "@capacitor/android": "^6.1.2",
@@ -23,6 +22,7 @@
     "gdal3.js": "2.8.1"
   },
   "devDependencies": {
-    "@capacitor/cli": "^6.1.2"
+    "@capacitor/cli": "^6.1.2",
+    "vite": "^6.1.0"
   }
 }
