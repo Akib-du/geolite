@@ -25,7 +25,8 @@ function geoMetadata(image) {
     SampleFormat: 3,
     SamplesPerPixel: 1,
     Compression: 1,
-    PlanarConfiguration: 1
+    PlanarConfiguration: 1,
+    GDAL_NODATA: String(noDataValue)
   };
   for (const [key, value] of Object.entries(keys)) {
     if (typeof value === 'number' && Number.isFinite(value)) metadata[key] = value;
