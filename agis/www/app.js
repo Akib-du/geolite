@@ -28,6 +28,8 @@ async function openFiles(files){
       const layer=addLayer(item.name,item.data,item.type);
       layer.metadata=item.metadata;
     });
+    const newest=state.layers.at(-1);
+    if(newest?.leaflet){const bounds=newest.leaflet.getBounds();if(bounds.isValid())map.fitBounds(bounds,{padding:[20,20]});}
     toast('GDAL imported '+imported.length+' layer(s)');
   }catch(error){
     toast('GDAL import failed: '+(error?.message||String(error)));
