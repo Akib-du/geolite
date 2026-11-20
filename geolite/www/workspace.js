@@ -3,7 +3,7 @@
  const waitFor=fn=>{if(fn())return;const t=setInterval(()=>{if(fn())clearInterval(t)},150);setTimeout(()=>clearInterval(t),20000)};
  const $=(s,r=document)=>r.querySelector(s), $$=(s,r=document)=>[...r.querySelectorAll(s)];
  function boot(){
-  if(!window.S||!window.map||!$('#view-map'))return false;
+  if(typeof S==='undefined'||typeof map==='undefined'||!map||!$('#view-map'))return false;
   if($('#gp-ribbon'))return true;
   const main=$('#main'),view=$('#view-map');
   const ribbon=document.createElement('div');ribbon.id='gp-ribbon';
