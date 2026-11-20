@@ -1,0 +1,65 @@
+name: Build GeoLite Mobile APK
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [geolite-mobile-apk]
+    paths:
+      - 'GeoLite-project-source.zip'
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout source archive
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: false
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Extract uploaded project
+        run: |
+          test -f GeoLite-project-source.zip
+          mkdir -p "$RUNNER_TEMP/geolite-source"
+          unzip -q GeoLite-project-source.zip -d "$RUNNER_TEMP/geolite-source"
+          test -f "$RUNNER_TEMP/geolite-source/GeoLite-project/geolite/package.json"
+          echo "PROJECT_DIR=$RUNNER_TEMP/geolite-source/GeoLite-project/geolite" >> "$GITHUB_ENV"
+
+      - name: Install dependencies and vendor libraries
+        run: |
+          cd "$PROJECT_DIR"
+          npm install
+          npm run vendor
+
+      - name: Generate Android project
+        run: |
+          cd "$PROJECT_DIR"
+          npx cap add android
+          npx cap sync android
+
+      - name: Build debug APK
+        run: |
+          cd "$PROJECT_DIR/android"
+          chmod +x gradlew
+          ./gradlew --no-daemon assembleDebug
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: GeoLite-debug-apk
+          path: ${{ env.PROJECT_DIR }}/android/app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: error
+          retention-days: 14
