@@ -1,0 +1,20 @@
+plugins { id 'com.android.application' }
+
+android {
+    namespace 'com.agis.nativeapp'
+    compileSdk 35
+    defaultConfig {
+        applicationId 'com.agis.nativeapp'
+        minSdk 26
+        targetSdk 35
+        versionCode 1
+        versionName '0.1.0-native-preview'
+        ndk { abiFilters 'arm64-v8a' }
+    }
+    sourceSets { main { jniLibs.srcDirs = ['src/main/jniLibs'] } }
+    buildTypes { debug { }; release { minifyEnabled false } }
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+}

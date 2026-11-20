@@ -1,0 +1,6 @@
+cmake_minimum_required(VERSION 3.22)
+project(agis_gdal LANGUAGES CXX)
+find_package(GDAL CONFIG REQUIRED)
+add_library(agis_gdal SHARED agis_gdal_jni.cpp)
+target_compile_features(agis_gdal PRIVATE cxx_std_17)
+target_link_libraries(agis_gdal PRIVATE GDAL::GDAL)

@@ -1,0 +1,60 @@
+name: Build aGIS Native Android (GDAL)
+on:
+  workflow_dispatch:
+  push:
+    branches: [agis-from-scratch]
+    paths:
+      - 'agis-android-native/**'
+      - '.github/workflows/build-agis-native-android.yml'
+permissions:
+  contents: read
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 180
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+      - name: Install Android NDK
+        run: sdkmanager "ndk;27.0.12077973" "platforms;android-35" "build-tools;35.0.0"
+      - name: Install vcpkg and build Android GDAL
+        run: |
+          git clone https://github.com/microsoft/vcpkg.git "$RUNNER_TEMP/vcpkg"
+          "$RUNNER_TEMP/vcpkg/bootstrap-vcpkg.sh" -disableMetrics
+          echo "VCPKG_ROOT=$RUNNER_TEMP/vcpkg" >> "$GITHUB_ENV"
+          export VCPKG_ROOT="$RUNNER_TEMP/vcpkg"
+          export ANDROID_NDK_HOME="$ANDROID_HOME/ndk/27.0.12077973"
+          "$VCPKG_ROOT/vcpkg" install gdal:arm64-android
+      - name: Configure and compile JNI bridge
+        run: |
+          cmake -S agis-android-native/native -B "$RUNNER_TEMP/agis-native-build" \
+            -DCMAKE_TOOLCHAIN_FILE="$VCPKG_ROOT/scripts/buildsystems/vcpkg.cmake" \
+            -DVCPKG_TARGET_TRIPLET=arm64-android \
+            -DVCPKG_CHAINLOAD_TOOLCHAIN_FILE="$ANDROID_HOME/ndk/27.0.12077973/build/cmake/android.toolchain.cmake" \
+            -DANDROID_ABI=arm64-v8a \
+            -DANDROID_PLATFORM=android-26 \
+            -DCMAKE_BUILD_TYPE=Release
+          cmake --build "$RUNNER_TEMP/agis-native-build" --config Release --parallel 2
+          mkdir -p agis-android-native/app/src/main/jniLibs/arm64-v8a
+          find "$RUNNER_TEMP/agis-native-build" -name 'libagis_gdal.so' -exec cp {} agis-android-native/app/src/main/jniLibs/arm64-v8a/ \;
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.9'
+      - name: Assemble debug APK
+        working-directory: agis-android-native
+        run: gradle --no-daemon assembleDebug
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: aGIS-native-debug-apk
+          path: agis-android-native/app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: error
+          retention-days: 14
