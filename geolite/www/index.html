@@ -127,7 +127,7 @@ legend{font-size:12px;color:#55615b}
 .leaflet-container a.leaflet-popup-close-button{position:absolute;top:0;right:0;width:24px;height:24px;font:16px/24px sans-serif;color:#757575;text-decoration:none;text-align:center}
 .leaflet-tooltip{position:absolute;padding:4px 6px;background:#fff;border:1px solid #fff;border-radius:3px;color:#222;white-space:nowrap;user-select:none;pointer-events:none;box-shadow:0 1px 3px rgba(0,0,0,.4)}
 </style>
- <link rel="stylesheet" href="workspace.css">\n</head>
+ <link rel="stylesheet" href="workspace.css">\n <link rel="stylesheet" href="tablet.css">\n</head>
 <body>
 <div id="hdr"><h1>GeoLite Mobile</h1>
  <button id="btn-open">+ Open data</button>
@@ -717,5 +717,5 @@ function initMap(){map=L.map('map',{zoomControl:true}).setView([23.8,90.4],7);ma
  if('serviceWorker' in navigator&&location.protocol.startsWith('http')&&!(window.Capacitor&&Capacitor.isNativePlatform&&Capacitor.isNativePlatform()))navigator.serviceWorker.register('sw.js').catch(()=>{});
 })();
 </script>
- <script src="workspace.js"></script>\n</body>
+ <script src="workspace.js"></script>\n <script src="tablet.js"></script>\n</body>
 </html>
