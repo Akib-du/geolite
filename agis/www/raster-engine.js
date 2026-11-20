@@ -172,6 +172,72 @@ async function gdalWarp(file, options, name) {
   } finally { for (const ds of opened.datasets) try { await Gdal.close(ds); } catch {} }
 }
 
+
+async function hydrology(file, kind, params, name, onProgress) {
+  const {image}=await openRaster(file);
+  const width=image.getWidth(),height=image.getHeight(),count=width*height;
+  if(count>8500000) throw new Error('D8 hydrology is limited to 8.5 million cells on this mobile build. Clip the DEM or resample it before processing.');
+  const src=(await image.readRasters({interleave:false}))[0];
+  const res=image.getResolution(),px=Math.abs(res[0]),py=Math.abs(res[1]);
+  const keys=image.getGeoKeys?.()||{}, geographic=!!keys.GeographicTypeGeoKey;
+  const lat=image.getOrigin()[1]*Math.PI/180;
+  const dx=px*(geographic?111320*Math.cos(lat):1),dy=py*(geographic?110574:1);
+  const gtNoData=Number(image.fileDirectory?.GDAL_NODATA);
+  const valid=v=>Number.isFinite(v)&&(!Number.isFinite(gtNoData)||v!==gtNoData);
+  const dirs=[{dx:1,dy:0,code:1},{dx:1,dy:1,code:2},{dx:0,dy:1,code:4},{dx:-1,dy:1,code:8},{dx:-1,dy:0,code:16},{dx:-1,dy:-1,code:32},{dx:0,dy:-1,code:64},{dx:1,dy:-1,code:128}];
+  const flow=new Uint8Array(count),down=new Int32Array(count);down.fill(-1);
+  const indegree=new Uint8Array(count);
+  const slope=new Float32Array(count);slope.fill(noDataValue);
+  for(let y=1;y<height-1;y++){
+    for(let x=1;x<width-1;x++){
+      const i=y*width+x,z=src[i];if(!valid(z))continue;
+      const z1=src[i-width-1],z2=src[i-width],z3=src[i-width+1],z4=src[i-1],z6=src[i+1],z7=src[i+width-1],z8=src[i+width],z9=src[i+width+1];
+      if(![z1,z2,z3,z4,z6,z7,z8,z9].every(valid))continue;
+      const gx=((z3+2*z6+z9)-(z1+2*z4+z7))/(8*dx),gy=((z7+2*z8+z9)-(z1+2*z2+z3))/(8*dy);
+      slope[i]=Math.atan(Math.hypot(gx,gy));
+      let best=0,bestDrop=0,bestIndex=-1;
+      for(const d of dirs){
+        const nx=x+d.dx,ny=y+d.dy,nidx=ny*width+nx,nz=src[nidx];
+        if(!valid(nz))continue;
+        const distance=Math.hypot(d.dx*dx,d.dy*dy),drop=(z-nz)/distance;
+        if(drop>bestDrop){bestDrop=drop;best=d.code;bestIndex=nidx;}
+      }
+      if(bestIndex>=0){flow[i]=best;down[i]=bestIndex;indegree[bestIndex]++;}
+    }
+    if(y%Math.max(1,Math.floor(height/30))===0)onProgress?.('D8 direction: '+Math.round(y/height*100)+'%');
+  }
+  if(kind==='flowdir')return writeFloatRaster(new Float32Array(flow),image,name);
+  const accumulation=new Float32Array(count),queue=new Uint32Array(count);
+  let head=0,tail=0;
+  for(let i=0;i<count;i++)if(valid(src[i])&&indegree[i]===0)queue[tail++]=i;
+  while(head<tail){
+    const i=queue[head++],to=down[i];
+    if(to>=0){
+      accumulation[to]+=accumulation[i]+1;
+      indegree[to]--;
+      if(indegree[to]===0)queue[tail++]=to;
+    }
+    if(head%Math.max(1,Math.floor(count/30))===0)onProgress?.('Flow accumulation: '+Math.round(head/Math.max(1,tail)*100)+'%');
+  }
+  if(kind==='flowacc')return writeFloatRaster(accumulation,image,name);
+  if(kind==='stream'){
+    const threshold=Number(params.threshold||100);
+    if(!(threshold>0))throw new Error('Stream threshold must be greater than zero.');
+    const out=new Float32Array(count);
+    for(let i=0;i<count;i++)out[i]=valid(src[i])?(accumulation[i]>=threshold?1:0):noDataValue;
+    return writeFloatRaster(out,image,name);
+  }
+  if(kind==='twi'){
+    const out=new Float32Array(count);
+    for(let i=0;i<count;i++){
+      const tan=Math.tan(slope[i]),area=(accumulation[i]+1)*Math.sqrt(dx*dy);
+      out[i]=valid(src[i])&&Number.isFinite(tan)&&tan>0?Math.log(area/tan):noDataValue;
+    }
+    return writeFloatRaster(out,image,name);
+  }
+  throw new Error('Unknown hydrology operation.');
+}
+
 export const rasterTools = [
   {id:'clip',name:'Clip Raster',group:'Preparation',description:'Clip to a coordinate extent.'},
   {id:'mask',name:'Extract by Mask',group:'Preparation',description:'Clip using a vector polygon mask.'},
@@ -183,6 +249,10 @@ export const rasterTools = [
   {id:'slope',name:'Slope',group:'Terrain',description:'Calculate slope in degrees from a DEM.'},
   {id:'aspect',name:'Aspect',group:'Terrain',description:'Calculate aspect in degrees from a DEM.'},
   {id:'hillshade',name:'Hillshade',group:'Terrain',description:'Calculate analytical hillshade from a DEM.'},
+  {id:'flowdir',name:'D8 Flow Direction',group:'Hydrology',description:'Route each valid cell to its steepest lower neighbour.'},
+  {id:'flowacc',name:'D8 Flow Accumulation',group:'Hydrology',description:'Count upstream contributing cells using D8 routing.'},
+  {id:'stream',name:'Stream Extraction',group:'Hydrology',description:'Extract cells above a flow accumulation threshold.'},
+  {id:'twi',name:'Topographic Wetness Index',group:'Hydrology',description:'Compute ln(contributing area / tan(slope)).'},
   {id:'info',name:'Raster Information',group:'Utilities',description:'Inspect raster dimensions, bounds, resolution and CRS.'}
 ];
 
@@ -193,6 +263,7 @@ export async function runRasterTool({tool,files,params={},onProgress=()=>{}}) {
   if (tool === 'calculator') return calculate(files,params.expression || '',name,onProgress);
   if (tool === 'reclass') return reclassify(file,params.rules || '',name,onProgress);
   if (['slope','aspect','hillshade'].includes(tool)) return terrain(file,tool,name,onProgress);
+  if (['flowdir','flowacc','stream','twi'].includes(tool)) return hydrology(file,tool,params,name,onProgress);
   if (tool === 'info') {
     const {image}=await openRaster(file);
     const g=image.getGeoKeys?.()||{};
