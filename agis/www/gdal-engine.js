@@ -3,6 +3,7 @@ import wasmUrl from 'gdal3.js/dist/package/gdal3WebAssembly.wasm?url';
 import dataUrl from 'gdal3.js/dist/package/gdal3WebAssembly.data?url';
 import { zipSync } from 'fflate';
 
+// GDAL 3.8.x WebAssembly runtime for the Capacitor WebView.
 let runtimePromise;
 let runtimeLogs = [];
 
