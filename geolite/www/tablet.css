@@ -1,0 +1,48 @@
+/* GeoLite Pro Tablet Edition — landscape-first desktop workspace */
+@media (min-width:700px) and (orientation:landscape){
+  html,body{min-width:700px}
+  #hdr{min-height:42px;padding:5px 12px}
+  #hdr h1{font-size:15px}
+  #hdr button{font-size:12px;padding:5px 9px}
+  #gp-ribbon-tabs{padding-left:14px}
+  .gp-rib-tab{padding:8px 18px!important;font-size:13px}
+  #gp-ribbon-tools{min-height:74px;padding:8px 14px;gap:12px}
+  .gp-tool{min-width:68px;min-height:54px;font-size:11px}
+  .gp-tool .gp-ico{font-size:21px}
+  #gp-editbar{min-height:40px;padding:5px 14px}
+  #view-map{grid-template-columns:250px minmax(0,1fr) 285px!important}
+  #gp-catalog,#gp-contents{display:block!important;min-width:0}
+  #gp-catalog{grid-column:1;grid-row:1}
+  #map{grid-column:2;grid-row:1}
+  #gp-contents{grid-column:3;grid-row:1}
+  #gp-attr-dock{height:260px;max-height:42vh;resize:vertical;overflow:hidden}
+  #gp-attr-scroll{min-height:0}
+  #gp-status{height:25px;font-size:11px}
+}
+@media (min-width:700px) and (orientation:portrait){
+  #gp-orientation-hint{display:flex!important}
+  #view-map{grid-template-columns:210px minmax(0,1fr)!important}
+  #gp-contents{display:none!important}
+  #gp-catalog{grid-column:1}
+  #map{grid-column:2}
+}
+#gp-orientation-hint{display:none;align-items:center;justify-content:center;gap:8px;padding:7px 12px;background:#fff3cd;color:#604b16;border-bottom:1px solid #e7d79e;font-size:12px;font-weight:600}
+.gp-pane-head{user-select:none}
+.gp-pane-head .gp-panel-tools{display:flex;align-items:center;gap:4px}
+.gp-pane-head .gp-panel-tools button,#gp-attr-head .gp-panel-tools button{font-size:10px;padding:3px 6px;line-height:1.2}
+#gp-catalog.gp-floating,#gp-contents.gp-floating,#gp-attr-dock.gp-floating{
+  position:fixed!important;display:flex!important;flex-direction:column!important;
+  z-index:3500!important;width:320px!important;height:58vh!important;max-height:78vh!important;
+  min-height:180px!important;resize:both!important;overflow:hidden!important;
+  border:1px solid #9aa8b3!important;border-radius:7px!important;
+  box-shadow:0 12px 36px #17212b55!important;background:#f8fafb!important;
+}
+#gp-catalog.gp-floating{left:24px;top:145px}
+#gp-contents.gp-floating{right:24px;top:145px}
+#gp-attr-dock.gp-floating{left:calc(50% - 260px);top:22vh;width:520px!important;height:48vh!important}
+#gp-catalog.gp-floating .gp-pane-body,#gp-contents.gp-floating .gp-pane-body,#gp-attr-dock.gp-floating #gp-attr-scroll{flex:1;min-height:0;overflow:auto}
+.gp-pane-head.gp-drag-handle,#gp-attr-head.gp-drag-handle{cursor:move;touch-action:none}
+.gp-pane-head .gp-panel-tools button.is-floating,#gp-attr-head .gp-panel-tools button.is-floating{background:#dceaf7;color:#174b37;border-color:#8fb2ca}
+@media(max-width:699px){
+ #gp-catalog.gp-floating,#gp-contents.gp-floating,#gp-attr-dock.gp-floating{position:absolute!important;left:5vw!important;right:auto!important;top:8vh!important;width:90vw!important;height:70vh!important}
+}
