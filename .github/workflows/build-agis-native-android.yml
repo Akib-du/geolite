@@ -46,7 +46,7 @@ jobs:
           echo "VCPKG_ROOT=$RUNNER_TEMP/vcpkg" >> "$GITHUB_ENV"
           export VCPKG_ROOT="$RUNNER_TEMP/vcpkg"
           export ANDROID_NDK_HOME="$ANDROID_HOME/ndk/27.0.12077973"
-          "$VCPKG_ROOT/vcpkg" install gdal:arm64-android
+          "$VCPKG_ROOT/vcpkg" install "gdal[core,gif,hdf5,iconv,libaec,libkml,libxml2,lzma,openjpeg,openssl,recommended-features,webp,zstd]:arm64-android"
       - name: Configure and compile JNI bridge
         run: |
           cmake -S agis-android-native/native -B "$RUNNER_TEMP/agis-native-build" \
