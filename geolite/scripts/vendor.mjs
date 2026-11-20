@@ -11,6 +11,9 @@ const files = [
   ['shpjs/dist/shp.min.js', 'shp.min.js'],
   ['@tmcw/togeojson/dist/togeojson.umd.js', 'togeojson.umd.js'],
   ['html2canvas/dist/html2canvas.min.js', 'html2canvas.min.js'],
+  ['gdal3.js/dist/package/gdal3.js', 'gdal3.js'],
+  ['gdal3.js/dist/package/gdal3WebAssembly.wasm', 'gdal3WebAssembly.wasm'],
+  ['gdal3.js/dist/package/gdal3WebAssembly.data', 'gdal3WebAssembly.data'],
 ];
 
 mkdirSync('www/vendor', { recursive: true });
