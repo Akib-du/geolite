@@ -77,7 +77,7 @@ async function calculate(files, expression, name, onProgress) {
     const first = opened[0], width = first.getWidth(), height = first.getHeight();
     if (width * height > 16000000) throw new Error('This calculator currently limits a single operation to 16 million cells to protect Android memory. Clip or resample the inputs first.');
     const arrays = [];
-    const variables = files.map((f, i) => safe(f.name.replace(/\.[^.]+$/, '')).replace(/^\d/, '_$&'));
+    const variables = files.map((f, i) => String.fromCharCode(65 + i));
     for (let i = 0; i < opened.length; i++) {
       const im = opened[i];
       if (im.getWidth() !== width || im.getHeight() !== height) throw new Error('Raster dimensions do not match. Align all inputs to the same grid first.');
@@ -204,8 +204,6 @@ export async function runRasterTool({tool,files,params={},onProgress=()=>{}}) {
     if(v.length!==4||!v.every(Number.isFinite)||v[0]>=v[2]||v[1]>=v[3]) throw new Error('Extent must be xmin ymin xmax ymax in the input raster CRS.');
     opts.push('-te',...v.map(String));
     if(params.extentCrs) opts.push('-te_srs',params.extentCrs);
-    opts.push('-crop_to_cutline');
-    opts.pop();
   } else if (tool==='mask') {
     if(!params.maskGeoJSON) throw new Error('Choose a polygon mask layer in the map before running Extract by Mask.');
     const Gdal=await getGdalRuntime();
