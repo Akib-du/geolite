@@ -4,9 +4,6 @@ on:
   workflow_dispatch:
   push:
     branches: [geolite-mobile-apk]
-    paths:
-      - 'GeoLite-project (2).zip'
-      - '.github/workflows/build-geolite-mobile.yml'
 
 permissions:
   contents: read
