@@ -29,9 +29,9 @@ jobs:
 
       - name: Extract uploaded project
         run: |
-          test -f GeoLite-project (2).zip
+          test -f "GeoLite-project (2).zip"
           mkdir -p "$RUNNER_TEMP/geolite-source"
-          unzip -q GeoLite-project (2).zip -d "$RUNNER_TEMP/geolite-source"
+          unzip -q "GeoLite-project (2).zip" -d "$RUNNER_TEMP/geolite-source"
           test -f "$RUNNER_TEMP/geolite-source/GeoLite-project/geolite/package.json"
           echo "PROJECT_DIR=$RUNNER_TEMP/geolite-source/GeoLite-project/geolite" >> "$GITHUB_ENV"
 
