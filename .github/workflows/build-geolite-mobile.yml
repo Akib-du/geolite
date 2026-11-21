@@ -5,7 +5,7 @@ on:
   push:
     branches: [geolite-mobile-apk]
     paths:
-      - 'GeoLite-project-source.zip'
+      - 'GeoLite-project (2).zip'
 
 permissions:
   contents: read
@@ -32,9 +32,9 @@ jobs:
 
       - name: Extract uploaded project
         run: |
-          test -f GeoLite-project-source.zip
+          test -f GeoLite-project (2).zip
           mkdir -p "$RUNNER_TEMP/geolite-source"
-          unzip -q GeoLite-project-source.zip -d "$RUNNER_TEMP/geolite-source"
+          unzip -q GeoLite-project (2).zip -d "$RUNNER_TEMP/geolite-source"
           test -f "$RUNNER_TEMP/geolite-source/GeoLite-project/geolite/package.json"
           echo "PROJECT_DIR=$RUNNER_TEMP/geolite-source/GeoLite-project/geolite" >> "$GITHUB_ENV"
 
